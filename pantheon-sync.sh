@@ -18,7 +18,7 @@
 #   --ddev-project-root: The root directory of the DDEV project. Defaults to the $DDEV_APPROOT environment variable.
 #   --version: The version of the script.
 
-VERSION="0.2.0"
+VERSION="0.3.0"
 DDEV_PROJECT_ROOT="$DDEV_APPROOT"
 
 while [[ $# -gt 0 ]]; do
@@ -66,6 +66,14 @@ while [[ $# -gt 0 ]]; do
     --ddev-project-root=*)
       DDEV_PROJECT_ROOT="${1#*=}"
       shift
+      ;;
+    
+    --upgrade)
+      brew uninstall pantheon-sync
+      brew untap padillaco/formulas
+      brew tap padillaco/formulas
+      brew install pantheon-sync
+      exit 0
       ;;
 
     --version)

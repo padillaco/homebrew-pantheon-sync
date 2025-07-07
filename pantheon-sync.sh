@@ -22,8 +22,6 @@ VERSION="0.2.0"
 DDEV_PROJECT_ROOT="$DDEV_APPROOT"
 
 while [[ $# -gt 0 ]]; do
-  echo "$1"
-
   case $1 in
     --site-name=*)
       SITE_NAME="${1#*=}"

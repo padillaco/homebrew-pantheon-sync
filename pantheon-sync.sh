@@ -16,7 +16,9 @@
 
 # Optional Flags:
 #   --ddev-project-root: The root directory of the DDEV project. Defaults to the $DDEV_APPROOT environment variable.
+#   --version: The version of the script.
 
+VERSION="0.2.0"
 DDEV_PROJECT_ROOT="$DDEV_APPROOT"
 
 while [[ $# -gt 0 ]]; do
@@ -27,42 +29,74 @@ while [[ $# -gt 0 ]]; do
       SITE_NAME="${1#*=}"
       shift
       ;;
+
     --site-slug=*)
       SITE_SLUG="${1#*=}"
       shift
       ;;
+
     --site-id=*)
       SITE_ID="${1#*=}"
       shift
       ;;
+
     --ddev-domain=*)
       DDEV_DOMAIN="${1#*=}"
       shift
       ;;
+
     --dev-domain=*)
       DEV_DOMAIN="${1#*=}"
       shift
       ;;
+
     --test-domain=*)
       TEST_DOMAIN="${1#*=}"
       shift
       ;;
+
     --live-domain=*)
       LIVE_DOMAIN="${1#*=}"
       shift
       ;;
+
     --env=*)
       ENV="${1#*=}"
       shift
       ;;
+
     --ddev-project-root=*)
       DDEV_PROJECT_ROOT="${1#*=}"
       shift
       ;;
+
+    --version)
+      echo "pantheon-sync v$VERSION"
+      exit 0
+      ;;
+
+    --help)
+      echo -e "Usage: pantheon-sync [flags]\n"
+      echo "Flags:"
+      echo "  --site-name             The name of the site on the Pantheon dashboard (e.g., \"My Site\")"
+      echo "  --site-slug             The slug of the site, which is found in the environment URL https://dev-site-slug.pantheonsite.io (e.g., \"my-site\")"
+      echo "  --site-id               The unique ID of the site (e.g., \"7acab2d5-c574-4c73-9baf-d9ec1e17abc3\")"
+      echo "  --env                   The environment to pull from (\"dev\", \"test\", or \"live\")"
+      echo "  --ddev-domain           The DDEV domain for the site (e.g., \"my-site.ddev.site\")"
+      echo "  --dev-domain            The development domain for the site. Only required if pulling from the dev environment."
+      echo "  --test-domain           The test/staging domain for the site. Only required if pulling from the test environment."
+      echo "  --live-domain           The live domain for the site. Only required if pulling from the live environment."
+      echo "  --ddev-project-root     The root directory of the DDEV project. Defaults to the \$DDEV_APPROOT environment variable."
+      echo "  --version               Shows the version of the script."
+      echo "  --help                  Shows this help message."
+      exit 0
+      ;;
+
     -*|--*)
       echo -e "\033[0;31mUnknown option $1\033[0m"
       exit 1
       ;;
+
     *)
       shift # past argument
       ;;

@@ -21,7 +21,7 @@
 #   --upgrade               Upgrades the "pantheon-sync" homebrew formula.
 #   --help                  Shows command usage and available flags."
 
-VERSION="0.3.1"
+VERSION="0.3.2"
 DDEV_DOMAINS=()
 DEV_DOMAINS=()
 TEST_DOMAINS=()
@@ -78,7 +78,7 @@ while [[ $# -gt 0 ]]; do
       ;;
 
     --version)
-      echo "pantheon-sync v$VERSION"
+      echo "pantheon-sync version $VERSION"
       exit 0
       ;;
 

@@ -22,7 +22,7 @@
 #   --update                Updates the "pantheon-sync" homebrew formula.
 #   --help                  Shows command usage and available flags."
 
-VERSION="0.3.4"
+VERSION="0.4.1"
 DDEV_DOMAINS=()
 DEV_DOMAINS=()
 TEST_DOMAINS=()

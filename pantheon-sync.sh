@@ -17,8 +17,9 @@
 #                           For multisites, pass multiple --test-domain flags to specify each URL in the multisite."
 #   --live-domain           The live domain for the site. Only required if pulling from the live environment."
 #                           For multisites, pass multiple --live-domain flags to specify each URL in the multisite."
+#   --verbose               Enables verbose output for debugging purposes."
 #   --version               Shows the version of the script."
-#   --upgrade               Upgrades the "pantheon-sync" homebrew formula.
+#   --update                Updates the "pantheon-sync" homebrew formula.
 #   --help                  Shows command usage and available flags."
 
 VERSION="0.3.4"
@@ -26,6 +27,7 @@ DDEV_DOMAINS=()
 DEV_DOMAINS=()
 TEST_DOMAINS=()
 LIVE_DOMAINS=()
+VERBOSE=0
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -69,7 +71,12 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     
-    --upgrade)
+    --verbose)
+      VERBOSE=1
+      shift
+      ;;
+    
+    --update)
       brew uninstall pantheon-sync
       brew untap padillaco/formulas
       brew tap padillaco/formulas
@@ -93,7 +100,7 @@ while [[ $# -gt 0 ]]; do
       echo -e "  --dev-domain            The development domain for the site. For multisites, pass multiple --test-domain flags to specify each URL in the multisite."
       echo -e "  --test-domain           The test/staging domain for the site. For multisites, pass multiple --test-domain flags to specify each URL in the multisite."
       echo -e "  --live-domain           The live domain for the site. For multisites, pass multiple --live-domain flags to specify each URL in the multisite."
-      echo -e "  --upgrade               Upgrades the \"pantheon-sync\" homebrew formula."
+      echo -e "  --update                Updates the \"pantheon-sync\" homebrew formula."
       echo -e "  --version               Shows the version of the script."
       echo -e "  --help                  Shows command usage and available flags."
       exit 0
@@ -193,7 +200,6 @@ DATABASE_FILEPATH="$TEMP_DIR/$SITE_SLUG-$ENV-$BACKUP_DATE-UTC-database.sql.gz"
 echo -e "Downloading backup database..."
 
 run_with_spinner terminus backup:get --element=database --to=$DATABASE_FILEPATH -- $SITE_SLUG.$ENV
-#run_with_spinner terminus backup:get --file="vawine_test_2025-07-11T05-16-59_UTC_database.sql.gz" --element=database --to=$DATABASE_FILEPATH -- $SITE_SLUG.$ENV
 
 if [ -e "$DATABASE_FILEPATH" ]; then
   echo -e "\033[0;32mBackup database downloaded\033[0m\n"
@@ -228,13 +234,18 @@ fi
 
 REPLACEMENT_COMMANDS=()
 
-for ((i=1; i<${#SOURCE_ENV_DOMAINS[@]}; i++)); do
+for ((i=0; i<${#SOURCE_ENV_DOMAINS[@]}; i++)); do
   REPLACEMENT_COMMANDS+=("ddev wp search-replace '(^|[^@])${SOURCE_ENV_DOMAINS[$i]}' '\1${DDEV_DOMAINS[$i]}' --url='${SOURCE_ENV_DOMAINS[$i]}' --regex --regex-flags=i --all-tables-with-prefix --skip-columns=guid --skip-plugins --skip-themes")
 done
 
 COMMAND_SEPARATOR=' && '
 REPLACEMENT_COMMANDS=$(printf "%s$COMMAND_SEPARATOR" "${REPLACEMENT_COMMANDS[@]}")
 REPLACEMENT_COMMANDS=${REPLACEMENT_COMMANDS%$COMMAND_SEPARATOR} # Remove the trailing separator
+
+if [ "$VERBOSE" -eq 1 ]; then
+  echo -e "\nRunning the following commands to replace URLs in the database:\n"
+  echo -e "\033[0;36m$REPLACEMENT_COMMANDS\033[0m\n"
+fi
 
 run_with_spinner bash -c "$REPLACEMENT_COMMANDS"
 

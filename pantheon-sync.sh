@@ -228,8 +228,8 @@ fi
 
 REPLACEMENT_COMMANDS=()
 
-for ((i=0; i<${#SOURCE_ENV_DOMAINS[@]}; i++)); do
-  REPLACEMENT_COMMANDS+=("ddev wp search-replace ${SOURCE_ENV_DOMAINS[$i]} ${DDEV_DOMAINS[$i]} --url=${SOURCE_ENV_DOMAINS[$i]} --all-tables-with-prefix --skip-columns=guid --skip-plugins --skip-themes")
+for ((i=1; i<${#SOURCE_ENV_DOMAINS[@]}; i++)); do
+  REPLACEMENT_COMMANDS+=("ddev wp search-replace '(^|[^@])${SOURCE_ENV_DOMAINS[$i]}' '\1${DDEV_DOMAINS[$i]}' --url='${SOURCE_ENV_DOMAINS[$i]}' --regex --regex-flags=i --all-tables-with-prefix --skip-columns=guid --skip-plugins --skip-themes")
 done
 
 COMMAND_SEPARATOR=' && '

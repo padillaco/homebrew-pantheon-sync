@@ -21,7 +21,7 @@
 #   --upgrade               Upgrades the "pantheon-sync" homebrew formula.
 #   --help                  Shows command usage and available flags."
 
-VERSION="0.3.2"
+VERSION="0.3.4"
 DDEV_DOMAINS=()
 DEV_DOMAINS=()
 TEST_DOMAINS=()

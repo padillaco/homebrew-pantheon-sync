@@ -22,7 +22,7 @@
 #   --update                Updates the "pantheon-sync" homebrew formula.
 #   --help                  Shows command usage and available flags."
 
-VERSION="0.4.1"
+VERSION="0.4.2"
 DDEV_DOMAINS=()
 DEV_DOMAINS=()
 TEST_DOMAINS=()
@@ -70,6 +70,11 @@ while [[ $# -gt 0 ]]; do
       LIVE_DOMAINS+=("${1#*=}")
       shift
       ;;
+
+    --verbose=*)
+      VERBOSE=${1#*=}
+      shift
+      ;;
     
     --verbose)
       VERBOSE=1
@@ -100,8 +105,9 @@ while [[ $# -gt 0 ]]; do
       echo -e "  --dev-domain            The development domain for the site. For multisites, pass multiple --test-domain flags to specify each URL in the multisite."
       echo -e "  --test-domain           The test/staging domain for the site. For multisites, pass multiple --test-domain flags to specify each URL in the multisite."
       echo -e "  --live-domain           The live domain for the site. For multisites, pass multiple --live-domain flags to specify each URL in the multisite."
-      echo -e "  --update                Updates the \"pantheon-sync\" homebrew formula."
+      echo -e "  --verbose               Enables verbose output for debugging purposes."
       echo -e "  --version               Shows the version of the script."
+      echo -e "  --update                Updates the \"pantheon-sync\" homebrew formula."
       echo -e "  --help                  Shows command usage and available flags."
       exit 0
       ;;
@@ -148,8 +154,8 @@ else
   exit 0
 fi
 
-echo -e "Syncing database and files from the \033[0;36m$SITE_NAME $ENV\033[0m environment...\n"
-echo -e "Creating database backup... \033[0;36m(keeping for 1 day)\033[0m"
+echo -e "Syncing the database and files from the \033[0;36m$SITE_NAME $ENV\033[0m environment...\n"
+echo -e "Creating a database backup... \033[0;36m(keeping for 1 day)\033[0m"
 
 # Show a spinner while running a command
 run_with_spinner() {
@@ -197,7 +203,7 @@ fi
 BACKUP_DATE=$(date -u +"%Y-%m-%dT%H-%M-%S")
 DATABASE_FILEPATH="$TEMP_DIR/$SITE_SLUG-$ENV-$BACKUP_DATE-UTC-database.sql.gz"
 
-echo -e "Downloading backup database..."
+echo -e "Downloading the backup database..."
 
 run_with_spinner terminus backup:get --element=database --to=$DATABASE_FILEPATH -- $SITE_SLUG.$ENV
 
@@ -208,7 +214,7 @@ else
   exit 0
 fi
 
-echo "Importing database..."
+echo "Importing the database..."
 
 run_with_spinner ddev import-db --file="$DATABASE_FILEPATH"
 

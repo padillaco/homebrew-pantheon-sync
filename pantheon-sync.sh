@@ -22,7 +22,7 @@
 #   --update                Updates the "pantheon-sync" homebrew formula.
 #   --help                  Shows command usage and available flags."
 
-VERSION="0.4.2"
+VERSION="0.4.3"
 DDEV_DOMAINS=()
 DEV_DOMAINS=()
 TEST_DOMAINS=()
@@ -318,6 +318,7 @@ if [ "$TOTAL_FILES_TO_SYNC" -gt 0 ]; then
   TOTAL_MEGABYTES=0
   OUTPUT_MEGABYTES=0
   PROGRESS_BAR_WIDTH=40
+  PERCENT_COMPLETE=0
   SYNC_COMPLETE_NEW_LINE="\n\n"
 
   # Run rsync and parse output

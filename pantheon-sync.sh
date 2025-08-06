@@ -2,32 +2,53 @@
 
 # Syncs the database and files from a specified Pantheon environment.
 
-# Command Example: pantheon-sync --site-name="My Site" --site-slug=my-site --site-id=7acab2d5-c574-4c73-9baf-d9ec1e17abc3 --env=live --ddev-domain=my-site.ddev.site --dev-domain=dev.mysite.com --test-domain=staging.mysite.com --live-domain=mysite.com
+# Command Example: pantheon-sync --site-name=MySite --site-slug=my-site --site-id=7acab2d5-c574-4c73-9baf-d9ec1e17abc3 --env=live --live-domain=mysite.com --test-domain=staging.mysite.com --dev-domain=dev.mysite.com --ddev-domain=my-site.ddev.site
 
-# Available Flags:
-#   --site-name             The name of the site on the Pantheon dashboard (e.g., "My Site")."
-#   --site-slug             The slug of the site, which is found in the Pantheon environment URL (e.g., "my-site")."
-#   --site-id               The unique ID of the site (e.g., "7acab2d5-c574-4c73-9baf-d9ec1e17abc3")."
-#   --env                   The environment to pull from ("dev", "test", or "live")."
-#   --ddev-domain           The DDEV domain for the site (e.g., "my-site.ddev.site")."
-#                           For multisites, pass multiple --ddev-domain flags to specify each URL in the multisite."
-#   --dev-domain            The development domain for the site. Only required if pulling from the dev environment."
-#                           For multisites, pass multiple --test-domain flags to specify each URL in the multisite."
-#   --test-domain           The test/staging domain for the site. Only required if pulling from the test environment."
-#                           For multisites, pass multiple --test-domain flags to specify each URL in the multisite."
-#   --live-domain           The live domain for the site. Only required if pulling from the live environment."
-#                           For multisites, pass multiple --live-domain flags to specify each URL in the multisite."
-#   --verbose               Enables verbose output for debugging purposes."
-#   --version               Shows the version of the script."
+# Flags:
+#   --site-name             The name of the site on the Pantheon dashboard (e.g., "My Site").
+#   --site-slug             The slug of the site, which is found in the Pantheon environment URL (e.g., "my-site").
+#   --site-id               The unique ID of the site (e.g., "7acab2d5-c574-4c73-9baf-d9ec1e17abc3").
+#   --env                   The environment to pull from ("dev", "test", or "live").
+#   --live-domain           One or more live domains for the site. See the note below for details.
+#   --test-domain           One or more test/staging domains for the site. See the note below for details.
+#   --dev-domain            One or more development domains for the site. See the note below for details.
+#   --ddev-domain           One or more DDEV domains for the site. See the note below for details.
+#   --verbose               Enables verbose output for debugging purposes.
+#   --version               Shows the version of the script.
 #   --update                Updates the "pantheon-sync" homebrew formula.
-#   --help                  Shows command usage and available flags."
+#   --help                  Shows command usage and available flags.
 
-VERSION="0.4.3"
+# Note for Domain URLs
+
+# 1. To specify multiple domains for an environment, provide a comma-separated list of domains within a single flag. For example:
+
+#   --dev-domain=dev1.example.com,dev2.example.com
+
+# 2. Each environment domain flag must have the same number of domains, and in the same order, as the other environment domain flags, to ensure that the wp search-replace command can replace each source domain with the correct DDEV domain.
+
+# For example, if you have two different domains for each environment on Pantheon (e.g., the default Pantheon environment URL, and the custom domain), and the site is a multisite with an additional domain (e.g., a blog site), you would specify all 3 domains for each environment like this:
+
+#   --live-domain=live-example.pantheonsite.io,example.com,blog.example.com
+#   --test-domain=test-example.pantheonsite.io,staging.example.com,staging.blog.example.com
+#   --dev-domain=dev-example.pantheonsite.io,dev.example.com,dev.blog.example.com
+#   --ddev-domain=example.ddev.site,example.ddev.site,blog.example.ddev.site
+
+VERSION="0.4.4"
 DDEV_DOMAINS=()
 DEV_DOMAINS=()
 TEST_DOMAINS=()
 LIVE_DOMAINS=()
 VERBOSE=0
+
+extract_domains() {
+  local input="$1"
+  local -n output_array=$2
+  IFS=',' read -ra DOMAINS <<< "$input"
+  for domain in "${DOMAINS[@]}"; do
+    trimmed_domain="$(echo "$domain" | xargs)"
+    output_array+=("$trimmed_domain")
+  done
+}
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -51,23 +72,23 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
 
-    --ddev-domain=*)
-      DDEV_DOMAINS+=("${1#*=}")
-      shift
-      ;;
-
-    --dev-domain=*)
-      DEV_DOMAINS+=("${1#*=}")
+    --live-domain=*)
+      extract_domains "${1#*=}" LIVE_DOMAINS
       shift
       ;;
 
     --test-domain=*)
-      TEST_DOMAINS+=("${1#*=}")
+      extract_domains "${1#*=}" TEST_DOMAINS
       shift
       ;;
 
-    --live-domain=*)
-      LIVE_DOMAINS+=("${1#*=}")
+    --dev-domain=*)
+      extract_domains "${1#*=}" DEV_DOMAINS
+      shift
+      ;;
+
+    --ddev-domain=*)
+      extract_domains "${1#*=}" DDEV_DOMAINS
       shift
       ;;
 
@@ -101,19 +122,28 @@ while [[ $# -gt 0 ]]; do
       echo -e "  --site-slug             The slug of the site, which is found in the Pantheon environment URL (e.g., \"my-site\")."
       echo -e "  --site-id               The unique ID of the site (e.g., \"7acab2d5-c574-4c73-9baf-d9ec1e17abc3\")."
       echo -e "  --env                   The environment to pull from (\"dev\", \"test\", or \"live\")."
-      echo -e "  --ddev-domain           The DDEV domain for the site. For multisites, pass multiple --ddev-domain flags to specify each URL in the multisite."
-      echo -e "  --dev-domain            The development domain for the site. For multisites, pass multiple --test-domain flags to specify each URL in the multisite."
-      echo -e "  --test-domain           The test/staging domain for the site. For multisites, pass multiple --test-domain flags to specify each URL in the multisite."
-      echo -e "  --live-domain           The live domain for the site. For multisites, pass multiple --live-domain flags to specify each URL in the multisite."
+      echo -e "  --live-domain           One or more live domains for the site. See the note below for details."
+      echo -e "  --test-domain           One or more test/staging domains for the site. See the note below for details."
+      echo -e "  --dev-domain            One or more development domains for the site. See the note below for details."
+      echo -e "  --ddev-domain           One or more DDEV domains for the site. See the note below for details."
       echo -e "  --verbose               Enables verbose output for debugging purposes."
       echo -e "  --version               Shows the version of the script."
       echo -e "  --update                Updates the \"pantheon-sync\" homebrew formula."
       echo -e "  --help                  Shows command usage and available flags."
+      echo -e "\n\033[1m\033[4m\033[33mNote for Domain URLs\033[0m"
+      echo -e "\n\033[1m\033[33m1.\033[0m To specify multiple domains for an environment, provide a comma-separated list of domains within a single flag. For example:"
+      echo -e "\n  --dev-domain=\033[36mdev1.example.com\033[0m,\033[36mdev2.example.com\033[0m"
+      echo -e "\n\033[1m\033[33m2.\033[0m Each environment domain flag must have the same number of domains, and in the same order, as the other environment domain flags, to ensure that the \033[36mwp search-replace\033[0m command can replace each source domain with the correct DDEV domain."
+      echo -e "\nFor example, if you have two different domains for each environment on Pantheon (e.g., the default Pantheon environment URL, and the custom domain), and the site is a multisite with an additional domain (e.g., a blog site), you would specify all 3 domains for each environment like this:\n"
+      echo -e "  --live-domain=\033[36mlive-example.pantheonsite.io\033[0m,\033[36mexample.com\033[0m,\033[36mblog.example.com\033[0m"
+      echo -e "  --test-domain=\033[36mtest-example.pantheonsite.io\033[0m,\033[36mstaging.example.com\033[0m,\033[36mstaging.blog.example.com\033[0m"
+      echo -e "  --dev-domain=\033[36mdev-example.pantheonsite.io\033[0m,\033[36mdev.example.com\033[0m,\033[36mdev.blog.example.com\033[0m"
+      echo -e "  --ddev-domain=\033[36mexample.ddev.site\033[0m,\033[36mexample.ddev.site\033[0m,\033[36mblog.example.ddev.site\033[0m\n"
       exit 0
       ;;
 
     -*|--*)
-      echo -e "\033[0;31mUnknown option $1\033[0m"
+      echo -e "\033[31mUnknown option $1\033[0m"
       exit 0
       ;;
 
@@ -124,38 +154,38 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [ -z "$DDEV_PROJECT" ]; then
-  echo -e "\033[0;31mNo DDEV project detected. Make sure you are executing this command within the directory of a DDEV project, in which the application is running.\033[0m"
+  echo -e "\033[31mNo DDEV project detected. Make sure you are executing this command within the directory of a DDEV project, in which the application is running.\033[0m"
   exit 0
 fi
 
 if [[ "$ENV" == "dev" ]]; then
   if [ ${#DEV_DOMAINS[@]} -eq 0 ]; then
-    echo -e "\033[0;31mPlease provide a development domain using the --dev-domain flag.\033[0m"
+    echo -e "\033[31mPlease provide a development domain using the --dev-domain flag.\033[0m"
     exit 0
   fi
 
   SOURCE_ENV_DOMAINS=("${DEV_DOMAINS[@]}")
 elif [[ "$ENV" == "test" ]]; then
   if [ ${#TEST_DOMAINS[@]} -eq 0 ]; then
-    echo -e "\033[0;31mPlease provide a staging domain using the --test-domain flag.\033[0m"
+    echo -e "\033[31mPlease provide a staging domain using the --test-domain flag.\033[0m"
     exit 0
   fi
 
   SOURCE_ENV_DOMAINS=("${TEST_DOMAINS[@]}")
 elif [[ "$ENV" == "live" ]]; then
   if [ ${#LIVE_DOMAINS[@]} -eq 0 ]; then
-    echo -e "\033[0;31mPlease provide a live domain using the --live-domain flag.\033[0m"
+    echo -e "\033[31mPlease provide a live domain using the --live-domain flag.\033[0m"
     exit 0
   fi
   
   SOURCE_ENV_DOMAINS=("${LIVE_DOMAINS[@]}")
 else
-  echo -e "\033[0;31mInvalid environment specified. Use 'dev', 'test', or 'live'.\033[0m"
+  echo -e "\033[31mInvalid environment specified. Use 'dev', 'test', or 'live'.\033[0m"
   exit 0
 fi
 
-echo -e "Syncing the database and files from the \033[0;36m$SITE_NAME $ENV\033[0m environment...\n"
-echo -e "Creating a database backup... \033[0;36m(keeping for 1 day)\033[0m"
+echo -e "Syncing the database and files from the \033[36m$SITE_NAME $ENV\033[0m environment...\n"
+echo -e "Creating a database backup... \033[36m(keeping for 1 day)\033[0m"
 
 # Show a spinner while running a command
 run_with_spinner() {
@@ -187,7 +217,7 @@ run_with_spinner() {
 run_with_spinner terminus backup:create --element=database --keep-for=1 -- $SITE_SLUG.$ENV
 
 if [[ "$OUTPUT" == *"Created a backup"* ]]; then
-  echo -e "\033[0;32mBackup database created\033[0m\n"
+  echo -e "\033[32mBackup database created\033[0m\n"
 else
   echo "$OUTPUT"
   exit 0
@@ -208,7 +238,7 @@ echo -e "Downloading the backup database..."
 run_with_spinner terminus backup:get --element=database --to=$DATABASE_FILEPATH -- $SITE_SLUG.$ENV
 
 if [ -e "$DATABASE_FILEPATH" ]; then
-  echo -e "\033[0;32mBackup database downloaded\033[0m\n"
+  echo -e "\033[32mBackup database downloaded\033[0m\n"
 else
   echo "$OUTPUT"
   exit 0
@@ -219,7 +249,7 @@ echo "Importing the database..."
 run_with_spinner ddev import-db --file="$DATABASE_FILEPATH"
 
 if [[ "$OUTPUT" == *"Successfully imported"* ]]; then
-  echo -e "\033[0;32mThe database was successfully imported\033[0m"
+  echo -e "\033[32mThe database was successfully imported\033[0m"
 else
   echo "$OUTPUT"
   exit 0
@@ -229,12 +259,12 @@ fi
 rm -rf "$TEMP_DIR"
 
 if [[ "${#SOURCE_ENV_DOMAINS[@]}" -eq 1 ]]; then
-  echo -e "\nReplacing URLs in the database from \033[0;36m$SOURCE_ENV_DOMAINS\033[0m to \033[0;36m$DDEV_DOMAINS\033[0m..."
+  echo -e "\nReplacing URLs in the database from \033[36m$SOURCE_ENV_DOMAINS\033[0m to \033[36m$DDEV_DOMAINS\033[0m..."
 else
   echo -e "\nReplacing URLs in the database from:"
   
   for ((i=0; i<${#SOURCE_ENV_DOMAINS[@]}; i++)); do
-    echo -e "  - \033[0;36m${SOURCE_ENV_DOMAINS[$i]}\033[0m to \033[0;36m${DDEV_DOMAINS[$i]}\033[0m"
+    echo -e "  - \033[36m${SOURCE_ENV_DOMAINS[$i]}\033[0m to \033[36m${DDEV_DOMAINS[$i]}\033[0m"
   done
 fi
 
@@ -250,7 +280,7 @@ REPLACEMENT_COMMANDS=${REPLACEMENT_COMMANDS%$COMMAND_SEPARATOR} # Remove the tra
 
 if [ "$VERBOSE" -eq 1 ]; then
   echo -e "\nRunning the following commands to replace URLs in the database:\n"
-  echo -e "\033[0;36m$REPLACEMENT_COMMANDS\033[0m\n"
+  echo -e "\033[36m$REPLACEMENT_COMMANDS\033[0m\n"
 fi
 
 run_with_spinner bash -c "$REPLACEMENT_COMMANDS"
@@ -262,9 +292,9 @@ for n in $(echo "$OUTPUT" | grep -oE 'Success: Made [0-9]+' | grep -oE '[0-9]+')
 done
 
 if [[ "$REPLACEMENTS" -eq 1 ]]; then
-  echo -e "\033[0;32m1 replacement made\033[0m"
+  echo -e "\033[32m1 replacement made\033[0m"
 else
-  echo -e "\033[0;32m$REPLACEMENTS replacements made\033[0m"
+  echo -e "\033[32m$REPLACEMENTS replacements made\033[0m"
 fi
 
 echo -e "\nFlushing the WordPress cache..."
@@ -276,7 +306,7 @@ echo -e "\nFlushing the WordPress cache..."
 run_with_spinner ddev wp cache flush --url=$DDEV_DOMAIN --skip-plugins --skip-themes
 
 if [[ "$OUTPUT" == *"Success:"* ]]; then
-  echo -e "\033[0;32mThe cache was successfully flushed\033[0m"
+  echo -e "\033[32mThe cache was successfully flushed\033[0m"
 else
   echo "$OUTPUT"
 fi
@@ -312,7 +342,7 @@ TOTAL_FILES_TO_SYNC=$(echo "$OUTPUT" | gawk '/^Transfer starting:/{flag=1;next}/
 SYNC_COMPLETE_NEW_LINE="\n"
 
 if [ "$TOTAL_FILES_TO_SYNC" -gt 0 ]; then
-  echo -e "Syncing \033[0;36m$TOTAL_FILES_TO_SYNC\033[0m files..."
+  echo -e "Syncing \033[36m$TOTAL_FILES_TO_SYNC\033[0m files..."
 
   SYNCED=0
   TOTAL_MEGABYTES=0
@@ -357,7 +387,7 @@ if [ "$TOTAL_FILES_TO_SYNC" -gt 0 ]; then
     fi
   done
 else
-  echo -e "\033[0;32mYou're all caught up!\033[0m"
+  echo -e "\033[32mYou're all caught up!\033[0m"
 fi
 
-echo -e "$SYNC_COMPLETE_NEW_LINE\e[1m\033[0;32mSync complete\033[0m\033[0m"
+echo -e "$SYNC_COMPLETE_NEW_LINE\e[1m\033[32mSync complete\033[0m\033[0m"

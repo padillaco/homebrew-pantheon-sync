@@ -33,7 +33,7 @@
 #   --dev-domain=dev-example.pantheonsite.io,dev.example.com,dev.blog.example.com
 #   --ddev-domain=example.ddev.site,example.ddev.site,blog.example.ddev.site
 
-VERSION="0.4.4"
+VERSION="0.4.5"
 DDEV_DOMAINS=()
 DEV_DOMAINS=()
 TEST_DOMAINS=()
@@ -271,7 +271,7 @@ fi
 REPLACEMENT_COMMANDS=()
 
 for ((i=0; i<${#SOURCE_ENV_DOMAINS[@]}; i++)); do
-  REPLACEMENT_COMMANDS+=("ddev wp search-replace '(^|[^@])${SOURCE_ENV_DOMAINS[$i]}' '\1${DDEV_DOMAINS[$i]}' --url='${SOURCE_ENV_DOMAINS[$i]}' --regex --regex-flags=i --all-tables-with-prefix --skip-columns=guid --skip-plugins --skip-themes")
+  REPLACEMENT_COMMANDS+=("ddev wp search-replace '(^|[^@])${SOURCE_ENV_DOMAINS[$i]}' '\1${DDEV_DOMAINS[$i]}' --url=${SOURCE_ENV_DOMAINS[$i]} --regex --regex-flags=i --all-tables-with-prefix --skip-columns=guid --skip-plugins --skip-themes")
 done
 
 COMMAND_SEPARATOR=' && '
@@ -303,7 +303,7 @@ echo -e "\nFlushing the WordPress cache..."
 # This command uses the DDEV WP CLI to flush the cache for the specified URL
 # The --skip-plugins and --skip-themes flags are used to avoid running any plugins
 # or themes that might interfere with the cache flush process
-run_with_spinner ddev wp cache flush --url=$DDEV_DOMAIN --skip-plugins --skip-themes
+run_with_spinner ddev wp cache flush --url=${DDEV_DOMAINS[0]} --skip-plugins --skip-themes
 
 if [[ "$OUTPUT" == *"Success:"* ]]; then
   echo -e "\033[32mThe cache was successfully flushed\033[0m"

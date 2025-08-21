@@ -2,7 +2,7 @@
 
 # Syncs the database and files from a specified Pantheon environment.
 
-# Command Example: pantheon-sync --site-name=MySite --site-slug=my-site --site-id=7acab2d5-c574-4c73-9baf-d9ec1e17abc3 --env=live --live-domain=mysite.com --test-domain=staging.mysite.com --dev-domain=dev.mysite.com --ddev-domain=my-site.ddev.site
+# Command Example: pantheon-sync --site-name="My Site" --site-slug=my-site --site-id=7acab2d5-c574-4c73-9baf-d9ec1e17abc3 --env=live --live-domain=mysite.com --test-domain=staging.mysite.com --dev-domain=dev.mysite.com --ddev-domain=my-site.ddev.site
 
 # Flags:
 #   --site-name             The name of the site on the Pantheon dashboard (e.g., "My Site").
@@ -33,7 +33,7 @@
 #   --dev-domain=dev-example.pantheonsite.io,dev.example.com,dev.blog.example.com
 #   --ddev-domain=example.ddev.site,example.ddev.site,blog.example.ddev.site
 
-VERSION="0.4.5"
+VERSION="0.4.6"
 DDEV_DOMAINS=()
 DEV_DOMAINS=()
 TEST_DOMAINS=()
@@ -103,10 +103,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     
     --update)
-      brew uninstall pantheon-sync
+      brew uninstall pantheon-sync wpengine-sync
       brew untap padillaco/formulas
       brew tap padillaco/formulas
-      brew install pantheon-sync
+      brew install pantheon-sync wpengine-sync
       exit 0
       ;;
 
@@ -271,7 +271,7 @@ fi
 REPLACEMENT_COMMANDS=()
 
 for ((i=0; i<${#SOURCE_ENV_DOMAINS[@]}; i++)); do
-  REPLACEMENT_COMMANDS+=("ddev wp search-replace '(^|[^@])${SOURCE_ENV_DOMAINS[$i]}' '\1${DDEV_DOMAINS[$i]}' --url=${SOURCE_ENV_DOMAINS[$i]} --regex --regex-flags=i --all-tables-with-prefix --skip-columns=guid --skip-plugins --skip-themes")
+  REPLACEMENT_COMMANDS+=("ddev wp search-replace '(^|[^@])${SOURCE_ENV_DOMAINS[$i]}' '\1${DDEV_DOMAINS[$i]}' --regex --regex-flags=i --all-tables-with-prefix --skip-columns=guid --skip-plugins --skip-themes")
 done
 
 COMMAND_SEPARATOR=' && '

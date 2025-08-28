@@ -2,13 +2,13 @@
 
 Syncs the database and files from a specified Pantheon environment.
 
-- [Installation](#installation)
+- [Installation and Updates](#installation-and-updates)
 - [Command Example](#command-example)
 - [Command Flags](#command-flags)
 - [Note for Domain URLs](#note-for-domain-urls)
 - [DDEV Command Setup](#ddev-command-setup)
 
-## Installation
+## Installation and Updates
 
 **Requirements:**
 - Docker: https://docs.docker.com/engine/install/
@@ -16,15 +16,22 @@ Syncs the database and files from a specified Pantheon environment.
 - Homebrew: https://brew.sh/
 - Terminus (by Pantheon): https://docs.pantheon.io/terminus/install
 
+**Installation:**
+
 ```sh
-brew tap padillaco/formulas
-brew install pantheon-sync
+$ brew tap padillaco/formulas
+$ brew install pantheon-sync
+```
+**Updating to a newer version:**
+
+```sh
+$ pantheon-sync --update
 ```
 
 ## Command Example
 
 ```sh
-pantheon-sync --site-name="Example Site" --site-slug=example --site-id=7acab2d5-c574-4c73-9baf-d9ec1e17abc3 --env=live --live-domain=example.com --test-domain=staging.example.com --dev-domain=dev.example.com --ddev-domain=example.ddev.site
+$ pantheon-sync --site-name="Example Site" --site-slug=example --site-id=7acab2d5-c574-4c73-9baf-d9ec1e17abc3 --env=live --live-domain=example.com --test-domain=staging.example.com --dev-domain=dev.example.com --ddev-domain=example.ddev.site
 ```
 
 ## Command Flags

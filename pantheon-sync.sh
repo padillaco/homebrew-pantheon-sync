@@ -2,38 +2,43 @@
 
 # Syncs the database and files from a specified Pantheon environment.
 
-# Command Example: pantheon-sync --site-name="My Site" --site-slug=my-site --site-id=7acab2d5-c574-4c73-9baf-d9ec1e17abc3 --env=live --live-domain=mysite.com --test-domain=staging.mysite.com --dev-domain=dev.mysite.com --ddev-domain=my-site.ddev.site
+# Command Example: pantheon-sync --site-name="Example Site" --site-slug=example --site-id=7acab2d5-c574-4c73-9baf-d9ec1e17abc3 --env=live --live-domain=example.com --test-domain=staging.example.com --dev-domain=dev.example.com --ddev-domain=example.ddev.site
 
 # Flags:
-#   --site-name             The name of the site on the Pantheon dashboard (e.g., "My Site").
-#   --site-slug             The slug of the site, which is found in the Pantheon environment URL (e.g., "my-site").
-#   --site-id               The unique ID of the site (e.g., "7acab2d5-c574-4c73-9baf-d9ec1e17abc3").
-#   --env                   The environment to pull from ("dev", "test", or "live").
-#   --live-domain           One or more live domains for the site. See the note below for details.
-#   --test-domain           One or more test/staging domains for the site. See the note below for details.
-#   --dev-domain            One or more development domains for the site. See the note below for details.
-#   --ddev-domain           One or more DDEV domains for the site. See the note below for details.
-#   --verbose               Enables verbose output for debugging purposes.
-#   --version               Shows the version of the script.
-#   --update                Updates the "pantheon-sync" homebrew formula.
-#   --help                  Shows command usage and available flags.
+#   --site-name           The name of the site on the Pantheon dashboard (e.g., "Example Site").
+#   --site-slug           The slug of the site, which is found in the dev, test, and live Pantheon environment URL.
+#   --site-id             The unique ID of the site (e.g., "7acab2d5-c574-4c73-9baf-d9ec1e17abc3").
+#   --env                 The environment to pull from ("dev", "test", or "live").
+#   --live-domain         One or more live domains for the site. See the note below for details.
+#   --test-domain         One or more test/staging domains for the site. See the note below for details.
+#   --dev-domain          One or more development domains for the site. See the note below for details.
+#   --ddev-domain         One or more DDEV domains for the site. See the note below for details.
+#   --ddev-project-root   The root directory of the DDEV project.
+#   --verbose             Enables verbose output for debugging purposes.
+#   --version             Shows the version of the script.
+#   --update              Updates the "pantheon-sync" homebrew formula.
+#   --help                Shows command usage and available flags.
 
 # Note for Domain URLs
 
-# 1. To specify multiple domains for an environment, provide a comma-separated list of domains within a single flag. For example:
+# 1. To specify multiple domains for an environment, provide a comma-separated list of domains for that
+#    environment domain flag as shown below.
 
-#   --dev-domain=dev1.example.com,dev2.example.com
+#    Example:
 
-# 2. Each environment domain flag must have the same number of domains, and in the same order, as the other environment domain flags, to ensure that the wp search-replace command can replace each source domain with the correct DDEV domain.
+#    In this example, there are 3 different domains for a multisite on Pantheon (the default Pantheon
+#    environment URL, the main custom domain, and a subdomain). Each environment domain flag would contain
+#    the following domains as a comma-separated list:
 
-# For example, if you have two different domains for each environment on Pantheon (e.g., the default Pantheon environment URL, and the custom domain), and the site is a multisite with an additional domain (e.g., a blog site), you would specify all 3 domains for each environment like this:
+#    --live-domain=live-example.pantheonsite.io,example.com,blog.example.com
+#    --test-domain=test-example.pantheonsite.io,staging.example.com,staging.blog.example.com
+#    --dev-domain=dev-example.pantheonsite.io,dev.example.com,dev.blog.example.com
+#    --ddev-domain=example.ddev.site,example.ddev.site,blog.example.ddev.site
 
-#   --live-domain=live-example.pantheonsite.io,example.com,blog.example.com
-#   --test-domain=test-example.pantheonsite.io,staging.example.com,staging.blog.example.com
-#   --dev-domain=dev-example.pantheonsite.io,dev.example.com,dev.blog.example.com
-#   --ddev-domain=example.ddev.site,example.ddev.site,blog.example.ddev.site
+# 2. The order of domains in each environment domain flag determines the mapping to the DDEV domain. The
+#    script will replace each environment domain found in the database with the corresponding DDEV domain.
 
-VERSION="0.4.6"
+VERSION="0.4.7"
 DDEV_DOMAINS=()
 DEV_DOMAINS=()
 TEST_DOMAINS=()
@@ -92,6 +97,11 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
 
+    --ddev-project-root=*)
+      DDEV_PROJECT_ROOT="${1#*=}"
+      shift
+      ;;
+
     --verbose=*)
       VERBOSE=${1#*=}
       shift
@@ -117,28 +127,33 @@ while [[ $# -gt 0 ]]; do
 
     --help)
       echo -e "Usage: pantheon-sync [flags]\n"
-      echo "Flags:"
-      echo -e "  --site-name             The name of the site on the Pantheon dashboard (e.g., \"My Site\")."
-      echo -e "  --site-slug             The slug of the site, which is found in the Pantheon environment URL (e.g., \"my-site\")."
-      echo -e "  --site-id               The unique ID of the site (e.g., \"7acab2d5-c574-4c73-9baf-d9ec1e17abc3\")."
-      echo -e "  --env                   The environment to pull from (\"dev\", \"test\", or \"live\")."
-      echo -e "  --live-domain           One or more live domains for the site. See the note below for details."
-      echo -e "  --test-domain           One or more test/staging domains for the site. See the note below for details."
-      echo -e "  --dev-domain            One or more development domains for the site. See the note below for details."
-      echo -e "  --ddev-domain           One or more DDEV domains for the site. See the note below for details."
-      echo -e "  --verbose               Enables verbose output for debugging purposes."
-      echo -e "  --version               Shows the version of the script."
-      echo -e "  --update                Updates the \"pantheon-sync\" homebrew formula."
-      echo -e "  --help                  Shows command usage and available flags."
-      echo -e "\n\033[1m\033[4m\033[33mNote for Domain URLs\033[0m"
-      echo -e "\n\033[1m\033[33m1.\033[0m To specify multiple domains for an environment, provide a comma-separated list of domains within a single flag. For example:"
-      echo -e "\n  --dev-domain=\033[36mdev1.example.com\033[0m,\033[36mdev2.example.com\033[0m"
-      echo -e "\n\033[1m\033[33m2.\033[0m Each environment domain flag must have the same number of domains, and in the same order, as the other environment domain flags, to ensure that the \033[36mwp search-replace\033[0m command can replace each source domain with the correct DDEV domain."
-      echo -e "\nFor example, if you have two different domains for each environment on Pantheon (e.g., the default Pantheon environment URL, and the custom domain), and the site is a multisite with an additional domain (e.g., a blog site), you would specify all 3 domains for each environment like this:\n"
-      echo -e "  --live-domain=\033[36mlive-example.pantheonsite.io\033[0m,\033[36mexample.com\033[0m,\033[36mblog.example.com\033[0m"
-      echo -e "  --test-domain=\033[36mtest-example.pantheonsite.io\033[0m,\033[36mstaging.example.com\033[0m,\033[36mstaging.blog.example.com\033[0m"
-      echo -e "  --dev-domain=\033[36mdev-example.pantheonsite.io\033[0m,\033[36mdev.example.com\033[0m,\033[36mdev.blog.example.com\033[0m"
-      echo -e "  --ddev-domain=\033[36mexample.ddev.site\033[0m,\033[36mexample.ddev.site\033[0m,\033[36mblog.example.ddev.site\033[0m\n"
+      echo -e "\033[1mFlags:\033[0m"
+      echo -e "  --site-name           The name of the site on the Pantheon dashboard (e.g., \"Example Site\")."
+      echo -e "  --site-slug           The slug of the site, which is found in the dev, test, and live Pantheon environment URL."
+      echo -e "  --site-id             The unique ID of the site (e.g., \"7acab2d5-c574-4c73-9baf-d9ec1e17abc3\")."
+      echo -e "  --env                 The environment to pull from (\"dev\", \"test\", or \"live\")."
+      echo -e "  --live-domain         One or more live domains for the site. See the note below for details."
+      echo -e "  --test-domain         One or more test/staging domains for the site. See the note below for details."
+      echo -e "  --dev-domain          One or more development domains for the site. See the note below for details."
+      echo -e "  --ddev-domain         One or more DDEV domains for the site. See the note below for details."
+      echo -e "  --ddev-project-root   The root directory of the DDEV project."
+      echo -e "  --verbose             Enables verbose output for debugging purposes."
+      echo -e "  --version             Shows the version of the script."
+      echo -e "  --update              Updates the \"pantheon-sync\" homebrew formula."
+      echo -e "  --help                Shows command usage and available flags.\n"
+      echo -e "\033[1m\033[4m\033[33mNote for Domain URLs\033[0m\n"
+      echo -e "\033[1m\033[33m1.\033[0m To specify multiple domains for an environment, provide a comma-separated list of domains for that"
+      echo -e "   environment domain flag as shown below.\n"
+      echo -e "   \033[1mExample:\033[0m\n"
+      echo -e "   In this example, there are 3 different domains for a multisite on Pantheon (the default Pantheon"
+      echo -e "   environment URL, the main custom domain, and a subdomain). Each environment domain flag would contain"
+      echo -e "   the following domains as a comma-separated list:\n"
+      echo -e "   --live-domain=\033[36mlive-example.pantheonsite.io\033[0m,\033[36mexample.com\033[0m,\033[36mblog.example.com\033[0m"
+      echo -e "   --test-domain=\033[36mtest-example.pantheonsite.io\033[0m,\033[36mstaging.example.com\033[0m,\033[36mstaging.blog.example.com\033[0m"
+      echo -e "   --dev-domain=\033[36mdev-example.pantheonsite.io\033[0m,\033[36mdev.example.com\033[0m,\033[36mdev.blog.example.com\033[0m"
+      echo -e "   --ddev-domain=\033[36mexample.ddev.site\033[0m,\033[36mexample.ddev.site\033[0m,\033[36mblog.example.ddev.site\033[0m\n"
+      echo -e "\033[1m\033[33m2.\033[0m The order of domains in each environment domain flag determines the mapping to the DDEV domain. The"
+      echo -e "   script will replace each environment domain found in the database with the corresponding DDEV domain.\n"
       exit 0
       ;;
 
@@ -154,8 +169,14 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [ -z "$DDEV_PROJECT" ]; then
-  echo -e "\033[31mNo DDEV project detected. Make sure you are executing this command within the directory of a DDEV project, in which the application is running.\033[0m"
-  exit 0
+  if [ -n "$DDEV_PROJECT_ROOT" ] && [ -d "$DDEV_PROJECT_ROOT" ]; then
+    cd "$DDEV_PROJECT_ROOT"
+  fi
+
+  if [ -z "$DDEV_PROJECT" ]; then
+    echo -e "\033[31mNo DDEV project detected. Make sure you are executing this command within the directory of a DDEV project, in which the application is running.\033[0m"
+    exit 0
+  fi
 fi
 
 if [[ "$ENV" == "dev" ]]; then

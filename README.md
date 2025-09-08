@@ -85,5 +85,5 @@ $ pantheon-sync --site-name="Example Site" --site-slug=example --site-id=7acab2d
 2. In the **Configuration** section within the file, add the required values for each configuration setting.
 3. Run `ddev sync` to sync the database and files from the **live** site, or specify an environment to sync from by running `ddev sync --env=(dev|test|live)`.
 
-**Note:** Running `ddev sync` for the first time will install the `pantheon-sync` command from the set of available Homebrew formulas located here located [here](https://github.com/padillaco/homebrew-formulas/tree/main/Formula).
+**Note:** Running `ddev sync` for the first time will install the `pantheon-sync` command from the [pantheon-sync.rb](https://github.com/padillaco/homebrew-formulas/blob/main/Formula/pantheon-sync.rb) Homebrew formula.
     

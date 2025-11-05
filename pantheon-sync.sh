@@ -8,7 +8,7 @@
 #   --site-name           The name of the site on the Pantheon dashboard (e.g., "Example Site").
 #   --site-slug           The slug of the site, which is found in the dev, test, and live Pantheon environment URL.
 #   --site-id             The unique ID of the site (e.g., "7acab2d5-c574-4c73-9baf-d9ec1e17abc3").
-#   --env                 The environment to pull from ("dev", "test", or "live").
+#   --env                 The environment to pull from ("dev", "test", "live", or the multidev environment slug).
 #   --live-domain         One or more live domains for the site. See the note below for details.
 #   --test-domain         One or more test/staging domains for the site. See the note below for details.
 #   --dev-domain          One or more development domains for the site. See the note below for details.
@@ -38,7 +38,7 @@
 # 2. The order of domains in each environment domain flag determines the mapping to the DDEV domain. The
 #    script will replace each environment domain found in the database with the corresponding DDEV domain.
 
-VERSION="0.4.7"
+VERSION="0.4.8"
 DDEV_DOMAINS=()
 DEV_DOMAINS=()
 TEST_DOMAINS=()
@@ -131,7 +131,7 @@ while [[ $# -gt 0 ]]; do
       echo -e "  --site-name           The name of the site on the Pantheon dashboard (e.g., \"Example Site\")."
       echo -e "  --site-slug           The slug of the site, which is found in the dev, test, and live Pantheon environment URL."
       echo -e "  --site-id             The unique ID of the site (e.g., \"7acab2d5-c574-4c73-9baf-d9ec1e17abc3\")."
-      echo -e "  --env                 The environment to pull from (\"dev\", \"test\", or \"live\")."
+      echo -e "  --env                 The environment to pull from (\"dev\", \"test\", \"live\", or the multidev environment slug)."
       echo -e "  --live-domain         One or more live domains for the site. See the note below for details."
       echo -e "  --test-domain         One or more test/staging domains for the site. See the note below for details."
       echo -e "  --dev-domain          One or more development domains for the site. See the note below for details."
@@ -179,7 +179,10 @@ if [ -z "$DDEV_PROJECT" ]; then
   fi
 fi
 
-if [[ "$ENV" == "dev" ]]; then
+if [[ -z "$ENV" ]]; then
+  echo -e "\033[31mPlease specify an environment to sync from using the --env flag ('dev', 'test', 'live', or the multidev environment slug).\033[0m"
+  exit 0
+elif [[ "$ENV" == "dev" ]]; then
   if [ ${#DEV_DOMAINS[@]} -eq 0 ]; then
     echo -e "\033[31mPlease provide a development domain using the --dev-domain flag.\033[0m"
     exit 0
@@ -201,8 +204,7 @@ elif [[ "$ENV" == "live" ]]; then
   
   SOURCE_ENV_DOMAINS=("${LIVE_DOMAINS[@]}")
 else
-  echo -e "\033[31mInvalid environment specified. Use 'dev', 'test', or 'live'.\033[0m"
-  exit 0
+  SOURCE_ENV_DOMAINS=("${ENV}-${SITE_SLUG}.pantheonsite.io")
 fi
 
 echo -e "Syncing the database and files from the \033[36m$SITE_NAME $ENV\033[0m environment...\n"

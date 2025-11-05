@@ -3,7 +3,7 @@
 ## Description: Sync the database and files from a specified Pantheon environment to the local DDEV environment. This script uses the `pantheon-sync` command-line tool to perform the synchronization.
 ## Usage: sync
 ## Example: "ddev sync --env=live"
-## Flags: [{"Name":"env","Shorthand":"e","Usage":"The environment to pull from (\"dev\", \"test\", or \"live\")","Type":"string","DefValue":"live"},{"Name":"verbose","Shorthand":"v","Usage":"Enable verbose output","Type":"bool","DefValue":"0"}]
+## Flags: [{"Name":"env","Shorthand":"e","Usage":"The environment to pull from (\"dev\", \"test\", \"live\", or the multidev environment slug)","Type":"string","DefValue":"live"},{"Name":"verbose","Shorthand":"v","Usage":"Enable verbose output","Type":"bool","DefValue":"0"}]
 
 # --------------------------- SETUP INSTRUCTIONS ---------------------------
 

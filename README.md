@@ -7,6 +7,7 @@ Syncs the database and files from a specified Pantheon environment.
 - [Command Flags](#command-flags)
 - [Note for Domain URLs](#note-for-domain-urls)
 - [DDEV Command Setup](#ddev-command-setup)
+- [Contributing](#contributing)
 
 ## Installation and Updates
 
@@ -86,4 +87,129 @@ $ pantheon-sync --site-name="Example Site" --site-slug=example --site-id=7acab2d
 3. Run `ddev sync` to sync the database and files from the **live** site, or specify an environment to sync from by running `ddev sync --env=(dev|test|live)`.
 
 **Note:** Running `ddev sync` for the first time will install the `pantheon-sync` command from the [pantheon-sync.rb](https://github.com/padillaco/homebrew-formulas/blob/main/Formula/pantheon-sync.rb) Homebrew formula.
+
+## Contributing
+
+We welcome contributions to improve pantheon-sync! Here's how to contribute:
+
+### Development Workflow
+
+1. **Fork and Clone**
+   ```sh
+   git clone https://github.com/padillaco/homebrew-pantheon-sync.git
+   cd homebrew-pantheon-sync
+   ```
+
+2. **Make Your Changes**
+   - Edit `pantheon-sync.sh` as needed
+   - Test your changes locally
+   - Update documentation if necessary
+
+3. **Test Locally**
+   ```sh
+   # Test the script directly
+   bash pantheon-sync.sh --help
+   ```
+
+### Versioning and Releases
+
+This project follows [Semantic Versioning](https://semver.org/):
+- **MAJOR** version for incompatible API changes
+- **MINOR** version for new functionality in a backward compatible manner
+- **PATCH** version for backward compatible bug fixes
+
+#### Creating a New Release
+
+1. **Update Version Number**
+   
+   Update the version in `pantheon-sync.sh`:
+   ```sh
+   VERSION="x.y.z"  # e.g., VERSION="0.5.0"
+   ```
+
+2. **Commit Your Changes**
+   ```sh
+   git add .
+   git commit -m "Release v0.5.0: Brief description of changes"
+   git push origin main
+   ```
+
+3. **Create and Push a Git Tag**
+   ```sh
+   git tag -a v0.5.0 -m "Release version 0.5.0"
+   git push origin v0.5.0
+   ```
+
+4. **Create GitHub Release**
+   - Go to https://github.com/padillaco/homebrew-pantheon-sync/releases
+   - Click "Draft a new release"
+   - Select the tag you just created (e.g., `v0.5.0`)
+   - Add release notes describing the changes
+   - Click "Publish release"
+
+   GitHub will automatically create a tarball at:
+   ```
+   https://github.com/padillaco/homebrew-pantheon-sync/archive/refs/tags/v0.5.0.tar.gz
+   ```
+
+### Updating the Homebrew Formula
+
+After publishing a new release, update the Homebrew formula:
+
+1. **Calculate the SHA256 Hash**
+   ```sh
+   # Download the tarball and calculate its SHA256
+   curl -L https://github.com/padillaco/homebrew-pantheon-sync/archive/refs/tags/v0.5.0.tar.gz -o /tmp/pantheon-sync.tar.gz
+   shasum -a 256 /tmp/pantheon-sync.tar.gz
+   ```
+
+2. **Update the Formula**
+   
+   Edit the formula at https://github.com/padillaco/homebrew-formulas/blob/main/Formula/pantheon-sync.rb:
+   
+   ```ruby
+   class PantheonSync < Formula
+     desc "Sync content from Pantheon sites to your local machine"
+     homepage "https://github.com/padillaco/homebrew-pantheon-sync"
+     url "https://github.com/padillaco/homebrew-pantheon-sync/archive/refs/tags/v0.5.0.tar.gz"
+     sha256 "YOUR_NEW_SHA256_HASH_HERE"
+     license "MIT"
+   ```
+
+3. **Test the Formula**
+   ```sh
+   brew uninstall pantheon-sync  # Remove old version
+   brew install --build-from-source pantheon-sync
+   pantheon-sync --version  # Verify new version
+   ```
+
+4. **Commit and Push the Formula Update**
+   ```sh
+   cd /path/to/homebrew-formulas
+   git add Formula/pantheon-sync.rb
+   git commit -m "Update pantheon-sync to v0.5.0"
+   git push origin main
+   ```
+
+### Pull Request Guidelines
+
+- Write clear, descriptive commit messages
+- Include tests for new features when applicable
+- Update documentation for any changed functionality
+- Keep changes focused and atomic
+- Reference any related issues in your PR description
+
+### Code Style
+
+- Follow existing bash scripting conventions
+- Use meaningful variable names
+- Comment complex logic
+- Keep functions focused and single-purpose
+- Use consistent indentation (2 or 4 spaces)
+
+### Getting Help
+
+- Open an issue for bugs or feature requests
+- Check existing issues before creating new ones
+- Provide detailed information about your environment and the problem
     

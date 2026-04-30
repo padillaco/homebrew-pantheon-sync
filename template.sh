@@ -2,8 +2,8 @@
 
 ## Description: Sync the database and files from a specified Pantheon environment to the local DDEV environment. This script uses the `pantheon-sync` command-line tool to perform the synchronization.
 ## Usage: sync
-## Example: "ddev sync --env=live --sync=db"
-## Flags: [{"Name":"env","Shorthand":"e","Usage":"The environment to pull from (\"dev\", \"test\", \"live\", or the multidev environment slug)","Type":"string","DefValue":"live"},{"Name":"sync","Shorthand":"s","Usage":"What to sync: 'all', 'db', or 'files'","Type":"string","DefValue":"all"},{"Name":"verbose","Shorthand":"v","Usage":"Enable verbose output","Type":"bool","DefValue":"0"}]
+## Example: "ddev sync --env=live --db"
+## Flags: [{"Name":"env","Shorthand":"e","Usage":"The environment to pull from (\"dev\", \"test\", \"live\", or the multidev environment slug)","Type":"string","DefValue":"live"},{"Name":"db","Usage":"Sync the database only","Type":"bool","DefValue":"0"},{"Name":"database","Usage":"Sync the database only (alias for --db)","Type":"bool","DefValue":"0"},{"Name":"files","Usage":"Sync the files only","Type":"bool","DefValue":"0"},{"Name":"verbose","Shorthand":"v","Usage":"Enable verbose output","Type":"bool","DefValue":"0"}]
 
 # --------------------------- SETUP INSTRUCTIONS ---------------------------
 
@@ -50,10 +50,9 @@ DDEV_DOMAIN=""
 ENV="live"
 # Enables verbose output for debugging purposes
 VERBOSE=0
-# What to sync: 'all' (default), 'db', or 'files'
-SYNC="all"
-# Enables multisite mode (optional)
-MULTISITE=0
+# Sync flags: set --db and/or --files at the command line, or leave unset to sync all
+SYNC_DB=0
+SYNC_FILES=0
 
 # --------------------------- END CONFIGURATION ----------------------------
 
@@ -66,6 +65,11 @@ while [[ $# -gt 0 ]]; do
 
     -s=*|--sync=*)
       SYNC="${1#*=}"
+      shift
+      ;;
+
+    -m|--multisite)
+      MULTISITE=1
       shift
       ;;
 
@@ -105,6 +109,16 @@ if ! command -v pantheon-sync >/dev/null 2>&1; then
 
   echo -e "\n"
   sleep 1
+fi
+
+if [[ "$SYNC_DB" -eq 1 && "$SYNC_FILES" -eq 1 ]]; then
+  SYNC="all"
+elif [[ "$SYNC_DB" -eq 1 ]]; then
+  SYNC="db"
+elif [[ "$SYNC_FILES" -eq 1 ]]; then
+  SYNC="files"
+else
+  SYNC="all"
 fi
 
 # Run `pantheon-sync --help` to see command usage and available flags

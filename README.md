@@ -37,20 +37,23 @@ $ pantheon-sync --site-name="Example Site" --site-slug=example --site-id=7acab2d
 
 ## Command Flags
 
-| Flag                | Description                                                                                           |
-|---------------------|-------------------------------------------------------------------------------------------------------|
-| `--site-name`       | The name of the site on the Pantheon dashboard (e.g., "Example Site").                                |
-| `--site-slug`       | The slug of the site, which is found in the dev, test, and live Pantheon environment URL.             |
-| `--site-id`         | The unique ID of the site (e.g., "7acab2d5-c574-4c73-9baf-d9ec1e17abc3").                             |
-| `--env`             | The environment to pull from ("dev", "test", or "live").                                              |
-| `--live-domain`     | One or more live domains for the site. See the note below for details.                                |
-| `--test-domain`     | One or more test/staging domains for the site. See the note below for details.                        |
-| `--dev-domain`      | One or more development domains for the site. See the note below for details.                         |
-| `--ddev-domain`     | One or more DDEV domains for the site. See the note below for details.                                |
-| `--verbose`         | Enables verbose output for debugging purposes.                                                        |
-| `--version`         | Shows the version of the script.                                                                      |
-| `--update`          | Updates the "pantheon-sync" homebrew formula.                                                         |
-| `--help`            | Shows command usage and available flags.                                                              |
+| Flag                  | Description                                                                                           |
+|-----------------------|-------------------------------------------------------------------------------------------------------|
+| `--site-name`         | The name of the site on the Pantheon dashboard (e.g., "Example Site").                                |
+| `--site-slug`         | The slug of the site, which is found in the dev, test, and live Pantheon environment URL.             |
+| `--site-id`           | The unique ID of the site (e.g., "7acab2d5-c574-4c73-9baf-d9ec1e17abc3").                             |
+| `--env`               | The environment to pull from ("dev", "test", "live", or the multidev environment slug).               |
+| `--live-domain`       | One or more live domains for the site. See the note below for details.                                |
+| `--test-domain`       | One or more test/staging domains for the site. See the note below for details.                        |
+| `--dev-domain`        | One or more development domains for the site. See the note below for details.                         |
+| `--ddev-domain`       | One or more DDEV domains for the site. See the note below for details.                                |
+| `--ddev-project-root` | The root directory of the DDEV project.                                                               |
+| `--sync`              | What to sync: `all` (default), `db`, or `files`.                                                      |
+| `--multisite`         | Enables multisite mode, which searches all tables with the site's prefix.                             |
+| `--verbose`           | Enables verbose output for debugging purposes.                                                        |
+| `--version`           | Shows the version of the script.                                                                      |
+| `--update`            | Updates the "pantheon-sync" homebrew formula.                                                         |
+| `--help`              | Shows command usage and available flags.                                                              |
 
 ## Note for Domain URLs
 
@@ -84,7 +87,15 @@ $ pantheon-sync --site-name="Example Site" --site-slug=example --site-id=7acab2d
 
 1. Copy the [template.sh](template.sh) file to `.ddev/commands/host/pantheon-sync.sh`.
 2. In the **Configuration** section within the file, add the required values for each configuration setting.
-3. Run `ddev sync` to sync the database and files from the **live** site, or specify an environment to sync from by running `ddev sync --env=(dev|test|live)`.
+3. Run `ddev sync` to sync the database and files from the **live** site, or use any of the following options:
+
+| Command | Description |
+|---------|-------------|
+| `ddev sync` | Sync the database and files from the live environment |
+| `ddev sync --env=test` | Sync from the test/staging environment |
+| `ddev sync --db` | Sync the database only |
+| `ddev sync --files` | Sync the files only |
+| `ddev sync --db --files` | Sync both (same as default) |
 
 **Note:** Running `ddev sync` for the first time will install the `pantheon-sync` command from the [pantheon-sync.rb](https://github.com/padillaco/homebrew-formulas/blob/main/Formula/pantheon-sync.rb) Homebrew formula.
 

@@ -2,8 +2,8 @@
 
 ## Description: Sync the database and files from a specified Pantheon environment to the local DDEV environment. This script uses the `pantheon-sync` command-line tool to perform the synchronization.
 ## Usage: sync
-## Example: "ddev sync --env=live"
-## Flags: [{"Name":"env","Shorthand":"e","Usage":"The environment to pull from (\"dev\", \"test\", \"live\", or the multidev environment slug)","Type":"string","DefValue":"live"},{"Name":"verbose","Shorthand":"v","Usage":"Enable verbose output","Type":"bool","DefValue":"0"}]
+## Example: "ddev sync --env=live --sync=db"
+## Flags: [{"Name":"env","Shorthand":"e","Usage":"The environment to pull from (\"dev\", \"test\", \"live\", or the multidev environment slug)","Type":"string","DefValue":"live"},{"Name":"sync","Shorthand":"s","Usage":"What to sync: 'all', 'db', or 'files'","Type":"string","DefValue":"all"},{"Name":"verbose","Shorthand":"v","Usage":"Enable verbose output","Type":"bool","DefValue":"0"}]
 
 # --------------------------- SETUP INSTRUCTIONS ---------------------------
 
@@ -50,6 +50,10 @@ DDEV_DOMAIN=""
 ENV="live"
 # Enables verbose output for debugging purposes
 VERBOSE=0
+# What to sync: 'all' (default), 'db', or 'files'
+SYNC="all"
+# Enables multisite mode (optional)
+MULTISITE=0
 
 # --------------------------- END CONFIGURATION ----------------------------
 
@@ -60,6 +64,11 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
 
+    -s=*|--sync=*)
+      SYNC="${1#*=}"
+      shift
+      ;;
+
     -v|--verbose)
       VERBOSE=1
       shift
@@ -67,7 +76,7 @@ while [[ $# -gt 0 ]]; do
 
     -*|--*)
       echo -e "\033[0;31mUnknown option $1\033[0m"
-      exit 0
+      exit 1
       ;;
 
     *)
@@ -108,4 +117,6 @@ pantheon-sync \
   --test-domain="$TEST_DOMAIN" \
   --dev-domain="$DEV_DOMAIN" \
   --ddev-domain="$DDEV_DOMAIN" \
+  --sync="$SYNC" \
+  --multisite=$MULTISITE \
   --verbose=$VERBOSE

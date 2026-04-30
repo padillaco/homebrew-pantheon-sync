@@ -14,6 +14,7 @@
 #   --dev-domain          One or more development domains for the site. See the note below for details.
 #   --ddev-domain         One or more DDEV domains for the site. See the note below for details.
 #   --ddev-project-root   The root directory of the DDEV project.
+#   --multisite           Enables multisite mode, which searches all tables with the site's prefix.
 #   --verbose             Enables verbose output for debugging purposes.
 #   --version             Shows the version of the script.
 #   --update              Updates the "pantheon-sync" homebrew formula.
@@ -38,12 +39,14 @@
 # 2. The order of domains in each environment domain flag determines the mapping to the DDEV domain. The
 #    script will replace each environment domain found in the database with the corresponding DDEV domain.
 
-VERSION="0.4.8"
+VERSION="0.5.0"
 DDEV_DOMAINS=()
 DEV_DOMAINS=()
 TEST_DOMAINS=()
 LIVE_DOMAINS=()
 VERBOSE=0
+SYNC="all"
+MULTISITE=0
 
 extract_domains() {
   local input="$1"
@@ -102,6 +105,21 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
 
+    --sync=*)
+      SYNC="${1#*=}"
+      shift
+      ;;
+
+    --multisite=*)
+      MULTISITE=${1#*=}
+      shift
+      ;;
+
+    --multisite)
+      MULTISITE=1
+      shift
+      ;;
+
     --verbose=*)
       VERBOSE=${1#*=}
       shift
@@ -137,6 +155,7 @@ while [[ $# -gt 0 ]]; do
       echo -e "  --dev-domain          One or more development domains for the site. See the note below for details."
       echo -e "  --ddev-domain         One or more DDEV domains for the site. See the note below for details."
       echo -e "  --ddev-project-root   The root directory of the DDEV project."
+      echo -e "  --sync                What to sync: 'all' (default), 'db', or 'files'."
       echo -e "  --verbose             Enables verbose output for debugging purposes."
       echo -e "  --version             Shows the version of the script."
       echo -e "  --update              Updates the \"pantheon-sync\" homebrew formula."
@@ -159,7 +178,7 @@ while [[ $# -gt 0 ]]; do
 
     -*|--*)
       echo -e "\033[31mUnknown option $1\033[0m"
-      exit 0
+      exit 1
       ;;
 
     *)
@@ -175,31 +194,31 @@ if [ -z "$DDEV_PROJECT" ]; then
 
   if [ -z "$DDEV_PROJECT" ]; then
     echo -e "\033[31mNo DDEV project detected. Make sure you are executing this command within the directory of a DDEV project, in which the application is running.\033[0m"
-    exit 0
+    exit 1
   fi
 fi
 
 if [[ -z "$ENV" ]]; then
   echo -e "\033[31mPlease specify an environment to sync from using the --env flag ('dev', 'test', 'live', or the multidev environment slug).\033[0m"
-  exit 0
+  exit 1
 elif [[ "$ENV" == "dev" ]]; then
   if [ ${#DEV_DOMAINS[@]} -eq 0 ]; then
     echo -e "\033[31mPlease provide a development domain using the --dev-domain flag.\033[0m"
-    exit 0
+    exit 1
   fi
 
   SOURCE_ENV_DOMAINS=("${DEV_DOMAINS[@]}")
 elif [[ "$ENV" == "test" ]]; then
   if [ ${#TEST_DOMAINS[@]} -eq 0 ]; then
     echo -e "\033[31mPlease provide a staging domain using the --test-domain flag.\033[0m"
-    exit 0
+    exit 1
   fi
 
   SOURCE_ENV_DOMAINS=("${TEST_DOMAINS[@]}")
 elif [[ "$ENV" == "live" ]]; then
   if [ ${#LIVE_DOMAINS[@]} -eq 0 ]; then
     echo -e "\033[31mPlease provide a live domain using the --live-domain flag.\033[0m"
-    exit 0
+    exit 1
   fi
   
   SOURCE_ENV_DOMAINS=("${LIVE_DOMAINS[@]}")
@@ -207,8 +226,10 @@ else
   SOURCE_ENV_DOMAINS=("${ENV}-${SITE_SLUG}.pantheonsite.io")
 fi
 
-echo -e "Syncing the database and files from the \033[36m$SITE_NAME $ENV\033[0m environment...\n"
-echo -e "Creating a database backup... \033[36m(keeping for 1 day)\033[0m"
+if [[ "$SYNC" != "all" && "$SYNC" != "db" && "$SYNC" != "files" ]]; then
+  echo -e "\033[31mInvalid --sync value. Use 'all', 'db', or 'files'.\033[0m"
+  exit 1
+fi
 
 # Show a spinner while running a command
 run_with_spinner() {
@@ -236,6 +257,18 @@ run_with_spinner() {
   return $exit_code
 }
 
+if [[ "$SYNC" == "db" ]]; then
+  echo -e "Syncing the database from the \033[36m$SITE_NAME $ENV\033[0m environment...\n"
+elif [[ "$SYNC" == "files" ]]; then
+  echo -e "Syncing the files from the \033[36m$SITE_NAME $ENV\033[0m environment...\n"
+else
+  echo -e "Syncing the database and files from the \033[36m$SITE_NAME $ENV\033[0m environment...\n"
+fi
+
+if [[ "$SYNC" != "files" ]]; then
+
+echo -e "Creating a database backup... \033[36m(keeping for 1 day)\033[0m"
+
 # Create a backup of the remote environment's database
 run_with_spinner terminus backup:create --element=database --keep-for=1 -- $SITE_SLUG.$ENV
 
@@ -243,7 +276,7 @@ if [[ "$OUTPUT" == *"Created a backup"* ]]; then
   echo -e "\033[32mBackup database created\033[0m\n"
 else
   echo "$OUTPUT"
-  exit 0
+  exit 1
 fi
 
 TEMP_DIR="$DDEV_APPROOT/.ddev/.tmp"
@@ -264,7 +297,7 @@ if [ -e "$DATABASE_FILEPATH" ]; then
   echo -e "\033[32mBackup database downloaded\033[0m\n"
 else
   echo "$OUTPUT"
-  exit 0
+  exit 1
 fi
 
 echo "Importing the database..."
@@ -275,7 +308,7 @@ if [[ "$OUTPUT" == *"Successfully imported"* ]]; then
   echo -e "\033[32mThe database was successfully imported\033[0m"
 else
   echo "$OUTPUT"
-  exit 0
+  exit 1
 fi
 
 # Remove the temporary folder and its contents
@@ -291,10 +324,13 @@ else
   done
 fi
 
+MULTISITE_FLAG=""
+[[ "$MULTISITE" -eq 1 ]] && MULTISITE_FLAG=" --all-tables-with-prefix"
+
 REPLACEMENT_COMMANDS=()
 
 for ((i=0; i<${#SOURCE_ENV_DOMAINS[@]}; i++)); do
-  REPLACEMENT_COMMANDS+=("ddev wp search-replace '(^|[^@])${SOURCE_ENV_DOMAINS[$i]}' '\1${DDEV_DOMAINS[$i]}' --regex --regex-flags=i --all-tables-with-prefix --skip-columns=guid --skip-plugins --skip-themes")
+  REPLACEMENT_COMMANDS+=("ddev wp search-replace '(^|[^@])${SOURCE_ENV_DOMAINS[$i]}' '\1${DDEV_DOMAINS[$i]}' --regex --regex-flags=i${MULTISITE_FLAG} --skip-columns=guid --skip-plugins --skip-themes 2>/dev/null")
 done
 
 COMMAND_SEPARATOR=' && '
@@ -334,6 +370,12 @@ else
   echo "$OUTPUT"
 fi
 
+fi # end database sync
+
+SYNC_COMPLETE_NEW_LINE="\n"
+
+if [[ "$SYNC" != "db" ]]; then
+
 echo -e "\nChecking for files to sync..."
 
 FILES_SOURCE="$ENV.$SITE_ID@appserver.$ENV.$SITE_ID.drush.in:files/"
@@ -361,8 +403,6 @@ FILES_DESTINATION="$DDEV_APPROOT/wp-content/uploads/"
 run_with_spinner rsync -rLv4n --stats --ignore-existing --copy-unsafe-links --size-only -e 'ssh -p 2222' "$FILES_SOURCE" "$FILES_DESTINATION"
 
 TOTAL_FILES_TO_SYNC=$(echo "$OUTPUT" | gawk '/^Transfer starting:/{flag=1;next}/sent [0-9]+ bytes/{flag=0}flag' | grep -v '^[[:space:]]*$' | grep -v '/$' | grep -v 'Skip existing' | wc -l | xargs)
-
-SYNC_COMPLETE_NEW_LINE="\n"
 
 if [ "$TOTAL_FILES_TO_SYNC" -gt 0 ]; then
   echo -e "Syncing \033[36m$TOTAL_FILES_TO_SYNC\033[0m files..."
@@ -412,5 +452,7 @@ if [ "$TOTAL_FILES_TO_SYNC" -gt 0 ]; then
 else
   echo -e "\033[32mYou're all caught up!\033[0m"
 fi
+
+fi # end files sync
 
 echo -e "$SYNC_COMPLETE_NEW_LINE\e[1m\033[32mSync complete\033[0m\033[0m"

@@ -161,6 +161,7 @@ After publishing a new release, update the Homebrew formula:
    # Download the tarball and calculate its SHA256
    curl -L https://github.com/padillaco/homebrew-pantheon-sync/archive/refs/tags/v0.5.0.tar.gz -o /tmp/pantheon-sync.tar.gz
    shasum -a 256 /tmp/pantheon-sync.tar.gz
+   rm /tmp/pantheon-sync.tar.gz
    ```
 
 2. **Update the Formula**

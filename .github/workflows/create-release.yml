@@ -1,0 +1,28 @@
+name: Create Release v0.6.0
+
+on:
+  push:
+    branches:
+      - 'copilot/create-release-v0-6-0'
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Create GitHub Release v0.6.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view v0.6.0 --repo "${{ github.repository }}" > /dev/null 2>&1; then
+            echo "Release v0.6.0 already exists, skipping."
+          else
+            gh release create v0.6.0 \
+              --repo "${{ github.repository }}" \
+              --title "v0.6.0" \
+              --target main \
+              --notes "" \
+              --latest
+            echo "Release v0.6.0 created successfully."
+          fi

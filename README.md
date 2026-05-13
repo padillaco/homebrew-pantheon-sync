@@ -5,7 +5,7 @@ Syncs the database and files from a specified Pantheon environment.
 - [Installation and Updates](#installation-and-updates)
 - [Command Example](#command-example)
 - [Command Flags](#command-flags)
-- [Note for Domain URLs](#note-for-domain-urls)
+- [Note for Domains](#note-for-domains)
 - [DDEV Command Setup](#ddev-command-setup)
 - [Contributing](#contributing)
 
@@ -32,7 +32,7 @@ $ pantheon-sync --update
 ## Command Example
 
 ```sh
-$ pantheon-sync --site-name="Example Site" --site-slug=example --site-id=7acab2d5-c574-4c73-9baf-d9ec1e17abc3 --env=live --live-domain=example.com --test-domain=staging.example.com --dev-domain=dev.example.com --ddev-domain=example.ddev.site
+$ pantheon-sync --site-name="Example Site" --site-slug=example --site-id=7acab2d5-c574-4c73-9baf-d9ec1e17abc3 --env=live --live-source-domains=example.com --live-replacement-domains=example.ddev.site
 ```
 
 ## Command Flags
@@ -43,10 +43,14 @@ $ pantheon-sync --site-name="Example Site" --site-slug=example --site-id=7acab2d
 | `--site-slug`         | The slug of the site, which is found in the dev, test, and live Pantheon environment URL.             |
 | `--site-id`           | The unique ID of the site (e.g., "7acab2d5-c574-4c73-9baf-d9ec1e17abc3").                             |
 | `--env`               | The environment to pull from ("dev", "test", "live", or the multidev environment slug).               |
-| `--live-domain`       | One or more live domains for the site. See the note below for details.                                |
-| `--test-domain`       | One or more test/staging domains for the site. See the note below for details.                        |
-| `--dev-domain`        | One or more development domains for the site. See the note below for details.                         |
-| `--ddev-domain`       | One or more DDEV domains for the site. See the note below for details.                                |
+| `--live-source-domains` | Custom domains to search/replace for the live environment. The Pantheon environment URL (`{env}-{site-slug}.pantheonsite.io`) is automatically added. |
+| `--live-replacement-domains` | Replacement domains for the live environment (the local DDEV domains). Must match the order of `--live-source-domains`. |
+| `--test-source-domains` | Custom domains for the test environment (optional, falls back to live domains). |
+| `--test-replacement-domains` | Replacement domains for the test environment. Must match the order of `--test-source-domains`. |
+| `--dev-source-domains` | Custom domains for the dev environment (optional, falls back to live domains). |
+| `--dev-replacement-domains` | Replacement domains for the dev environment. Must match the order of `--dev-source-domains`. |
+| `--other-source-domains` | Custom domains for other environments, e.g. multidev (optional, falls back to live domains). |
+| `--other-replacement-domains` | Replacement domains for other environments. Must match the order of `--other-source-domains`. |
 | `--ddev-project-root` | The root directory of the DDEV project.                                                               |
 | `--sync`              | What to sync: `all` (default), `db`, or `files`.                                                      |
 | `--multisite`         | Enables multisite mode, which searches all tables with the site's prefix.                             |
@@ -55,38 +59,27 @@ $ pantheon-sync --site-name="Example Site" --site-slug=example --site-id=7acab2d
 | `--update`            | Updates the "pantheon-sync" homebrew formula.                                                         |
 | `--help`              | Shows command usage and available flags.                                                              |
 
-## Note for Domain URLs
+## Note for Domains
 
-1. To specify multiple domains for an environment, provide a comma-separated list of domains for that environment domain flag as shown below.
+1. The Pantheon environment URL (`{env}-{site-slug}.pantheonsite.io`) is automatically added to the selected environment's source domains and paired with the primary DDEV URL as its replacement, unless that URL is already present.
 
-    **Example:**
+2. Use `--live-source-domains` for the live environment's custom domains. Optionally use `--test-source-domains`, `--dev-source-domains`, and `--other-source-domains` for environment-specific domains. If env-specific domains are not set, the live domains are used as a fallback.
 
-    In this example, there are 3 different domains for a multisite on Pantheon (the default Pantheon environment URL, the main custom domain, and a subdomain). Each environment domain flag would contain the following domains as a comma-separated list:
-
-    **Live**
+    **Example (multisite with different domains per environment):**
 
     ```sh
-    --live-domain=live-example.pantheonsite.io,example.com,blog.example.com
-    ```
-    **Test/Staging**
-    ```sh
-    --test-domain=test-example.pantheonsite.io,staging.example.com,staging.blog.example.com
-    ```
-    **Development**
-    ```sh
-    --dev-domain=dev-example.pantheonsite.io,dev.example.com,dev.blog.example.com
-    ```
-    **DDEV**
-    ```sh
-    --ddev-domain=example.ddev.site,example.ddev.site,blog.example.ddev.site
+    --live-source-domains=blog.example.com,example.com
+    --live-replacement-domains=blog.example.ddev.site,example.ddev.site
+    --test-source-domains=blog.staging.example.com,staging.example.com
+    --test-replacement-domains=blog.example.ddev.site,example.ddev.site
     ```
 
-2. The order of domains in each environment domain flag determines the mapping to the DDEV domain. The script will replace each environment domain found in the database with the corresponding DDEV domain.
+3. The order of domains in source flags determines the mapping to replacement flags. The script will replace each source domain found in the database with the corresponding replacement domain.
 
 ## DDEV Command Setup
 
 1. Copy the [template.sh](template.sh) file to `.ddev/commands/host/pantheon-sync.sh`.
-2. In the **Configuration** section within the file, add the required values for each configuration setting.
+2. Set the website configuration values in the `pantheon-sync` command call within the file.
 3. Run `ddev sync` to sync the database and files from the **live** site, or use any of the following options:
 
 | Command | Description |

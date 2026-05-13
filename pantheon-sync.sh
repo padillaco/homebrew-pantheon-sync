@@ -2,48 +2,60 @@
 
 # Syncs the database and files from a specified Pantheon environment.
 
-# Command Example: pantheon-sync --site-name="Example Site" --site-slug=example --site-id=7acab2d5-c574-4c73-9baf-d9ec1e17abc3 --env=live --live-domain=example.com --test-domain=staging.example.com --dev-domain=dev.example.com --ddev-domain=example.ddev.site
+# Command Example: pantheon-sync --site-name="Example Site" --site-slug=example --site-id=7acab2d5-c574-4c73-9baf-d9ec1e17abc3 --env=live --live-source-domains=example.com --live-replacement-domains=example.ddev.site
 
 # Flags:
-#   --site-name           The name of the site on the Pantheon dashboard (e.g., "Example Site").
-#   --site-slug           The slug of the site, which is found in the dev, test, and live Pantheon environment URL.
-#   --site-id             The unique ID of the site (e.g., "7acab2d5-c574-4c73-9baf-d9ec1e17abc3").
-#   --env                 The environment to pull from ("dev", "test", "live", or the multidev environment slug).
-#   --live-domain         One or more live domains for the site. See the note below for details.
-#   --test-domain         One or more test/staging domains for the site. See the note below for details.
-#   --dev-domain          One or more development domains for the site. See the note below for details.
-#   --ddev-domain         One or more DDEV domains for the site. See the note below for details.
-#   --ddev-project-root   The root directory of the DDEV project.
-#   --multisite           Enables multisite mode, which searches all tables with the site's prefix.
-#   --verbose             Enables verbose output for debugging purposes.
-#   --version             Shows the version of the script.
-#   --update              Updates the "pantheon-sync" homebrew formula.
-#   --help                Shows command usage and available flags.
+#   --site-name                 The name of the site on the Pantheon dashboard (e.g., "Example Site").
+#   --site-slug                 The slug of the site, which is found in the dev, test, and live Pantheon environment URL.
+#   --site-id                   The unique ID of the site (e.g., "7acab2d5-c574-4c73-9baf-d9ec1e17abc3").
+#   --env                       The environment to pull from ("dev", "test", "live", or the multidev environment slug).
+#   --live-source-domains       Source domains for the live environment (optional if --site-slug is set).
+#   --live-replacement-domains  Replacement domains for the live environment.
+#   --test-source-domains       Source domains for the test environment (optional, falls back to live).
+#   --test-replacement-domains  Replacement domains for the test environment (optional, falls back to live).
+#   --dev-source-domains        Source domains for the dev environment (optional, falls back to live).
+#   --dev-replacement-domains   Replacement domains for the dev environment (optional, falls back to live).
+#   --other-source-domains      Source domains for other environments, e.g. multidev (optional, falls back to live).
+#   --other-replacement-domains Replacement domains for other environments (optional, falls back to live).
+#   --ddev-project-root         The root directory of the DDEV project.
+#   --sync                      What to sync: 'all' (default), 'db', or 'files'.
+#   --multisite                 Enables multisite mode, which searches all tables with the site's prefix.
+#   --verbose                   Enables verbose output for debugging purposes.
+#   --version                   Shows the version of the script.
+#   --update                    Updates the "pantheon-sync" homebrew formula.
+#   --help                      Shows command usage and available flags.
 
-# Note for Domain URLs
+# Note for Domains
 
-# 1. To specify multiple domains for an environment, provide a comma-separated list of domains for that
-#    environment domain flag as shown below.
+# 1. The Pantheon environment URL ({env}-{site-slug}.pantheonsite.io) is automatically added to
+#    the selected environment's source domains and paired with the primary DDEV URL as its replacement,
+#    unless that URL is already present.
 
-#    Example:
+# 2. Use --live-source-domains for the live environment's custom domains. Optionally use
+#    --test-source-domains, --dev-source-domains, and --other-source-domains for environment-specific
+#    domains. If env-specific domains are not set, the live domains are used as a fallback.
 
-#    In this example, there are 3 different domains for a multisite on Pantheon (the default Pantheon
-#    environment URL, the main custom domain, and a subdomain). Each environment domain flag would contain
-#    the following domains as a comma-separated list:
+#    Example (multisite with different domains per environment):
 
-#    --live-domain=live-example.pantheonsite.io,example.com,blog.example.com
-#    --test-domain=test-example.pantheonsite.io,staging.example.com,staging.blog.example.com
-#    --dev-domain=dev-example.pantheonsite.io,dev.example.com,dev.blog.example.com
-#    --ddev-domain=example.ddev.site,example.ddev.site,blog.example.ddev.site
+#    --live-source-domains=blog.example.com,example.com
+#    --live-replacement-domains=blog.example.ddev.site,example.ddev.site
+#    --test-source-domains=blog.staging.example.com,staging.example.com
+#    --test-replacement-domains=blog.example.ddev.site,example.ddev.site
 
-# 2. The order of domains in each environment domain flag determines the mapping to the DDEV domain. The
-#    script will replace each environment domain found in the database with the corresponding DDEV domain.
+# 3. The order of domains in source flags determines the mapping to replacement flags. The
+#    script will replace each source domain with the corresponding replacement domain.
 
-VERSION="0.5.0"
-DDEV_DOMAINS=()
-DEV_DOMAINS=()
-TEST_DOMAINS=()
-LIVE_DOMAINS=()
+VERSION="0.6.0"
+LIVE_SOURCE_DOMAINS=()
+LIVE_REPLACEMENT_DOMAINS=()
+TEST_SOURCE_DOMAINS=()
+TEST_REPLACEMENT_DOMAINS=()
+DEV_SOURCE_DOMAINS=()
+DEV_REPLACEMENT_DOMAINS=()
+OTHER_SOURCE_DOMAINS=()
+OTHER_REPLACEMENT_DOMAINS=()
+SOURCE_DOMAINS=()
+REPLACEMENT_DOMAINS=()
 VERBOSE=0
 SYNC="all"
 MULTISITE=0
@@ -80,23 +92,43 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
 
-    --live-domain=*)
-      extract_domains "${1#*=}" LIVE_DOMAINS
+    --live-source-domains=*)
+      extract_domains "${1#*=}" LIVE_SOURCE_DOMAINS
       shift
       ;;
 
-    --test-domain=*)
-      extract_domains "${1#*=}" TEST_DOMAINS
+    --live-replacement-domains=*)
+      extract_domains "${1#*=}" LIVE_REPLACEMENT_DOMAINS
       shift
       ;;
 
-    --dev-domain=*)
-      extract_domains "${1#*=}" DEV_DOMAINS
+    --test-source-domains=*)
+      extract_domains "${1#*=}" TEST_SOURCE_DOMAINS
       shift
       ;;
 
-    --ddev-domain=*)
-      extract_domains "${1#*=}" DDEV_DOMAINS
+    --test-replacement-domains=*)
+      extract_domains "${1#*=}" TEST_REPLACEMENT_DOMAINS
+      shift
+      ;;
+
+    --dev-source-domains=*)
+      extract_domains "${1#*=}" DEV_SOURCE_DOMAINS
+      shift
+      ;;
+
+    --dev-replacement-domains=*)
+      extract_domains "${1#*=}" DEV_REPLACEMENT_DOMAINS
+      shift
+      ;;
+
+    --other-source-domains=*)
+      extract_domains "${1#*=}" OTHER_SOURCE_DOMAINS
+      shift
+      ;;
+
+    --other-replacement-domains=*)
+      extract_domains "${1#*=}" OTHER_REPLACEMENT_DOMAINS
       shift
       ;;
 
@@ -146,33 +178,38 @@ while [[ $# -gt 0 ]]; do
     --help)
       echo -e "Usage: pantheon-sync [flags]\n"
       echo -e "\033[1mFlags:\033[0m"
-      echo -e "  --site-name           The name of the site on the Pantheon dashboard (e.g., \"Example Site\")."
-      echo -e "  --site-slug           The slug of the site, which is found in the dev, test, and live Pantheon environment URL."
-      echo -e "  --site-id             The unique ID of the site (e.g., \"7acab2d5-c574-4c73-9baf-d9ec1e17abc3\")."
-      echo -e "  --env                 The environment to pull from (\"dev\", \"test\", \"live\", or the multidev environment slug)."
-      echo -e "  --live-domain         One or more live domains for the site. See the note below for details."
-      echo -e "  --test-domain         One or more test/staging domains for the site. See the note below for details."
-      echo -e "  --dev-domain          One or more development domains for the site. See the note below for details."
-      echo -e "  --ddev-domain         One or more DDEV domains for the site. See the note below for details."
-      echo -e "  --ddev-project-root   The root directory of the DDEV project."
-      echo -e "  --sync                What to sync: 'all' (default), 'db', or 'files'."
-      echo -e "  --verbose             Enables verbose output for debugging purposes."
-      echo -e "  --version             Shows the version of the script."
-      echo -e "  --update              Updates the \"pantheon-sync\" homebrew formula."
-      echo -e "  --help                Shows command usage and available flags.\n"
-      echo -e "\033[1m\033[4m\033[33mNote for Domain URLs\033[0m\n"
-      echo -e "\033[1m\033[33m1.\033[0m To specify multiple domains for an environment, provide a comma-separated list of domains for that"
-      echo -e "   environment domain flag as shown below.\n"
-      echo -e "   \033[1mExample:\033[0m\n"
-      echo -e "   In this example, there are 3 different domains for a multisite on Pantheon (the default Pantheon"
-      echo -e "   environment URL, the main custom domain, and a subdomain). Each environment domain flag would contain"
-      echo -e "   the following domains as a comma-separated list:\n"
-      echo -e "   --live-domain=\033[36mlive-example.pantheonsite.io\033[0m,\033[36mexample.com\033[0m,\033[36mblog.example.com\033[0m"
-      echo -e "   --test-domain=\033[36mtest-example.pantheonsite.io\033[0m,\033[36mstaging.example.com\033[0m,\033[36mstaging.blog.example.com\033[0m"
-      echo -e "   --dev-domain=\033[36mdev-example.pantheonsite.io\033[0m,\033[36mdev.example.com\033[0m,\033[36mdev.blog.example.com\033[0m"
-      echo -e "   --ddev-domain=\033[36mexample.ddev.site\033[0m,\033[36mexample.ddev.site\033[0m,\033[36mblog.example.ddev.site\033[0m\n"
-      echo -e "\033[1m\033[33m2.\033[0m The order of domains in each environment domain flag determines the mapping to the DDEV domain. The"
-      echo -e "   script will replace each environment domain found in the database with the corresponding DDEV domain.\n"
+      echo -e "  --site-name                 The name of the site on the Pantheon dashboard (e.g., \"Example Site\")."
+      echo -e "  --site-slug                 The slug of the site, which is found in the dev, test, and live Pantheon environment URL."
+      echo -e "  --site-id                   The unique ID of the site (e.g., \"7acab2d5-c574-4c73-9baf-d9ec1e17abc3\")."
+      echo -e "  --env                       The environment to pull from (\"dev\", \"test\", \"live\", or the multidev environment slug)."
+      echo -e "  --live-source-domains       Source domains for the live environment (optional if --site-slug is set)."
+      echo -e "  --live-replacement-domains  Replacement domains for the live environment."
+      echo -e "  --test-source-domains       Source domains for the test environment (optional, falls back to live)."
+      echo -e "  --test-replacement-domains  Replacement domains for the test environment (optional, falls back to live)."
+      echo -e "  --dev-source-domains        Source domains for the dev environment (optional, falls back to live)."
+      echo -e "  --dev-replacement-domains   Replacement domains for the dev environment (optional, falls back to live)."
+      echo -e "  --other-source-domains      Source domains for other environments, e.g. multidev (optional, falls back to live)."
+      echo -e "  --other-replacement-domains Replacement domains for other environments (optional, falls back to live)."
+      echo -e "  --ddev-project-root         The root directory of the DDEV project."
+      echo -e "  --sync                      What to sync: 'all' (default), 'db', or 'files'."
+      echo -e "  --multisite                 Enables multisite mode, which searches all tables with the site's prefix."
+      echo -e "  --verbose                   Enables verbose output for debugging purposes."
+      echo -e "  --version                   Shows the version of the script."
+      echo -e "  --update                    Updates the \"pantheon-sync\" homebrew formula."
+      echo -e "  --help                      Shows command usage and available flags.\n"
+      echo -e "\033[1m\033[4m\033[33mNote for Domains\033[0m\n"
+      echo -e "\033[1m\033[33m1.\033[0m The Pantheon environment URL (\033[36m{env}-{site-slug}.pantheonsite.io\033[0m) is automatically added to"
+      echo -e "   the selected environment's source domains and paired with the primary DDEV URL, unless already present.\n"
+      echo -e "\033[1m\033[33m2.\033[0m Use \033[36m--live-source-domains\033[0m for live custom domains. Optionally use \033[36m--test-source-domains\033[0m,"
+      echo -e "   \033[36m--dev-source-domains\033[0m, and \033[36m--other-source-domains\033[0m for environment-specific domains."
+      echo -e "   If env-specific domains are not set, the live domains are used as a fallback.\n"
+      echo -e "   \033[1mExample (multisite with different domains per environment):\033[0m\n"
+      echo -e "   --live-source-domains=\033[36mblog.example.com\033[0m,\033[36mexample.com\033[0m"
+      echo -e "   --live-replacement-domains=\033[36mblog.example.ddev.site\033[0m,\033[36mexample.ddev.site\033[0m"
+      echo -e "   --test-source-domains=\033[36mblog.staging.example.com\033[0m,\033[36mstaging.example.com\033[0m"
+      echo -e "   --test-replacement-domains=\033[36mblog.example.ddev.site\033[0m,\033[36mexample.ddev.site\033[0m\n"
+      echo -e "\033[1m\033[33m3.\033[0m The order of domains in source flags determines the mapping to replacement flags. The"
+      echo -e "   script will replace each source domain with the corresponding replacement domain.\n"
       exit 0
       ;;
 
@@ -201,29 +238,43 @@ fi
 if [[ -z "$ENV" ]]; then
   echo -e "\033[31mPlease specify an environment to sync from using the --env flag ('dev', 'test', 'live', or the multidev environment slug).\033[0m"
   exit 1
-elif [[ "$ENV" == "dev" ]]; then
-  if [ ${#DEV_DOMAINS[@]} -eq 0 ]; then
-    echo -e "\033[31mPlease provide a development domain using the --dev-domain flag.\033[0m"
-    exit 1
-  fi
+fi
 
-  SOURCE_ENV_DOMAINS=("${DEV_DOMAINS[@]}")
-elif [[ "$ENV" == "test" ]]; then
-  if [ ${#TEST_DOMAINS[@]} -eq 0 ]; then
-    echo -e "\033[31mPlease provide a staging domain using the --test-domain flag.\033[0m"
-    exit 1
-  fi
-
-  SOURCE_ENV_DOMAINS=("${TEST_DOMAINS[@]}")
-elif [[ "$ENV" == "live" ]]; then
-  if [ ${#LIVE_DOMAINS[@]} -eq 0 ]; then
-    echo -e "\033[31mPlease provide a live domain using the --live-domain flag.\033[0m"
-    exit 1
-  fi
-  
-  SOURCE_ENV_DOMAINS=("${LIVE_DOMAINS[@]}")
+# Select domain pair based on environment, with fallback to live domains
+if [[ "$ENV" == "test" ]] && [ ${#TEST_SOURCE_DOMAINS[@]} -gt 0 ]; then
+  SOURCE_DOMAINS=("${TEST_SOURCE_DOMAINS[@]}")
+  REPLACEMENT_DOMAINS=("${TEST_REPLACEMENT_DOMAINS[@]}")
+elif [[ "$ENV" == "dev" ]] && [ ${#DEV_SOURCE_DOMAINS[@]} -gt 0 ]; then
+  SOURCE_DOMAINS=("${DEV_SOURCE_DOMAINS[@]}")
+  REPLACEMENT_DOMAINS=("${DEV_REPLACEMENT_DOMAINS[@]}")
+elif [[ "$ENV" != "live" && "$ENV" != "test" && "$ENV" != "dev" ]] && [ ${#OTHER_SOURCE_DOMAINS[@]} -gt 0 ]; then
+  SOURCE_DOMAINS=("${OTHER_SOURCE_DOMAINS[@]}")
+  REPLACEMENT_DOMAINS=("${OTHER_REPLACEMENT_DOMAINS[@]}")
 else
-  SOURCE_ENV_DOMAINS=("${ENV}-${SITE_SLUG}.pantheonsite.io")
+  SOURCE_DOMAINS=("${LIVE_SOURCE_DOMAINS[@]}")
+  REPLACEMENT_DOMAINS=("${LIVE_REPLACEMENT_DOMAINS[@]}")
+fi
+
+# Auto-generate the Pantheon environment URL ({env}-{site-slug}.pantheonsite.io) and add it to
+# SOURCE_DOMAINS if not already present, pairing the primary DDEV URL as its replacement domain.
+if [ -n "$SITE_SLUG" ]; then
+  GENERATED_ENV_DOMAIN="${ENV}-${SITE_SLUG}.pantheonsite.io"
+  DOMAIN_ALREADY_SET=0
+  for domain in "${SOURCE_DOMAINS[@]}"; do
+    if [[ "$domain" == "$GENERATED_ENV_DOMAIN" ]]; then
+      DOMAIN_ALREADY_SET=1
+      break
+    fi
+  done
+
+  if [ "$DOMAIN_ALREADY_SET" -eq 0 ]; then
+    SOURCE_DOMAINS+=("$GENERATED_ENV_DOMAIN")
+    REPLACEMENT_DOMAINS+=("${DDEV_PRIMARY_URL#*://}")
+  fi
+fi
+
+if [ ${#SOURCE_DOMAINS[@]} -eq 0 ]; then
+  echo -e "\033[33mNo custom domains were provided for the $ENV environment. Only the default environment URL will be replaced.\033[0m"
 fi
 
 if [[ "$SYNC" != "all" && "$SYNC" != "db" && "$SYNC" != "files" ]]; then
@@ -234,7 +285,7 @@ fi
 # Show a spinner while running a command
 run_with_spinner() {
   local tmpfile=$(mktemp)
-  ("$@") >"$tmpfile" 2>&1 &
+  ("$@") >"$tmpfile" 2>&1 </dev/null &
   local cmd_pid=$!
   local delay=0.1
   local spinstr='|/-\'
@@ -314,46 +365,64 @@ fi
 # Remove the temporary folder and its contents
 rm -rf "$TEMP_DIR"
 
-if [[ "${#SOURCE_ENV_DOMAINS[@]}" -eq 1 ]]; then
-  echo -e "\nReplacing URLs in the database from \033[36m$SOURCE_ENV_DOMAINS\033[0m to \033[36m$DDEV_DOMAINS\033[0m..."
+if [[ "${#SOURCE_DOMAINS[@]}" -eq 1 ]]; then
+  echo -e "\nReplacing URLs in the database from \033[36m$SOURCE_DOMAINS\033[0m to \033[36m$REPLACEMENT_DOMAINS\033[0m..."
 else
   echo -e "\nReplacing URLs in the database from:"
   
-  for ((i=0; i<${#SOURCE_ENV_DOMAINS[@]}; i++)); do
-    echo -e "  - \033[36m${SOURCE_ENV_DOMAINS[$i]}\033[0m to \033[36m${DDEV_DOMAINS[$i]}\033[0m"
+  for ((i=0; i<${#SOURCE_DOMAINS[@]}; i++)); do
+    echo -e "  - \033[36m${SOURCE_DOMAINS[$i]}\033[0m to \033[36m${REPLACEMENT_DOMAINS[$i]}\033[0m"
   done
 fi
 
 MULTISITE_FLAG=""
 [[ "$MULTISITE" -eq 1 ]] && MULTISITE_FLAG=" --all-tables-with-prefix"
 
-REPLACEMENT_COMMANDS=()
-
-for ((i=0; i<${#SOURCE_ENV_DOMAINS[@]}; i++)); do
-  REPLACEMENT_COMMANDS+=("ddev wp search-replace '(^|[^@])${SOURCE_ENV_DOMAINS[$i]}' '\1${DDEV_DOMAINS[$i]}' --regex --regex-flags=i${MULTISITE_FLAG} --skip-columns=guid --skip-plugins --skip-themes 2>/dev/null")
-done
-
-COMMAND_SEPARATOR=' && '
-REPLACEMENT_COMMANDS=$(printf "%s$COMMAND_SEPARATOR" "${REPLACEMENT_COMMANDS[@]}")
-REPLACEMENT_COMMANDS=${REPLACEMENT_COMMANDS%$COMMAND_SEPARATOR} # Remove the trailing separator
-
 if [ "$VERBOSE" -eq 1 ]; then
   echo -e "\nRunning the following commands to replace URLs in the database:\n"
-  echo -e "\033[36m$REPLACEMENT_COMMANDS\033[0m\n"
+  for ((i=0; i<${#SOURCE_DOMAINS[@]}; i++)); do
+    echo -e "  \033[36mddev wp search-replace '://${SOURCE_DOMAINS[$i]}' '://${REPLACEMENT_DOMAINS[$i]}'${MULTISITE_FLAG} --skip-columns=guid --skip-plugins --skip-themes 2>/dev/null\033[0m"
+  done
+  echo ""
 fi
 
-run_with_spinner bash -c "$REPLACEMENT_COMMANDS"
-
+TOTAL_DOMAIN_COUNT=${#SOURCE_DOMAINS[@]}
+COMPLETED_DOMAIN_COUNT=0
 REPLACEMENTS=0
+SPINSTR='|/-\'
+tput civis 2>/dev/null
 
-for n in $(echo "$OUTPUT" | grep -oE 'Success: Made [0-9]+' | grep -oE '[0-9]+'); do
-  REPLACEMENTS=$((REPLACEMENTS + n))
+for ((i=0; i<${#SOURCE_DOMAINS[@]}; i++)); do
+  DOMAIN_CMD="ddev wp search-replace '://${SOURCE_DOMAINS[$i]}' '://${REPLACEMENT_DOMAINS[$i]}'${MULTISITE_FLAG} --skip-columns=guid --skip-plugins --skip-themes 2>/dev/null"
+  DOMAIN_TMPFILE=$(mktemp)
+  bash -c "$DOMAIN_CMD" >"$DOMAIN_TMPFILE" 2>&1 </dev/null &
+  DOMAIN_CMD_PID=$!
+
+  while kill -0 $DOMAIN_CMD_PID 2>/dev/null; do
+    for j in $(seq 0 3); do
+      printf "\r%d of %d domains replaced [%c]  " "$COMPLETED_DOMAIN_COUNT" "$TOTAL_DOMAIN_COUNT" "${SPINSTR:$j:1}"
+      sleep 0.1
+    done
+  done
+
+  wait $DOMAIN_CMD_PID
+  DOMAIN_OUTPUT=$(cat "$DOMAIN_TMPFILE")
+  rm -f "$DOMAIN_TMPFILE"
+
+  COMPLETED_DOMAIN_COUNT=$((COMPLETED_DOMAIN_COUNT + 1))
+
+  for n in $(echo "$DOMAIN_OUTPUT" | grep -oE 'Success: Made [0-9]+' | grep -oE '[0-9]+'); do
+    REPLACEMENTS=$((REPLACEMENTS + n))
+  done
 done
 
+printf "\r%-50s\r" ""
+tput cnorm 2>/dev/null
+
 if [[ "$REPLACEMENTS" -eq 1 ]]; then
-  echo -e "\033[32m1 replacement made\033[0m"
+  echo -e "\033[32m1 total replacement made\033[0m"
 else
-  echo -e "\033[32m$REPLACEMENTS replacements made\033[0m"
+  echo -e "\033[32m$REPLACEMENTS total replacements made\033[0m"
 fi
 
 echo -e "\nFlushing the WordPress cache..."
@@ -362,7 +431,7 @@ echo -e "\nFlushing the WordPress cache..."
 # This command uses the DDEV WP CLI to flush the cache for the specified URL
 # The --skip-plugins and --skip-themes flags are used to avoid running any plugins
 # or themes that might interfere with the cache flush process
-run_with_spinner ddev wp cache flush --url=${DDEV_DOMAINS[0]} --skip-plugins --skip-themes
+run_with_spinner ddev wp cache flush --url=${REPLACEMENT_DOMAINS[0]} --skip-plugins --skip-themes
 
 if [[ "$OUTPUT" == *"Success:"* ]]; then
   echo -e "\033[32mThe cache was successfully flushed\033[0m"
@@ -376,7 +445,8 @@ SYNC_COMPLETE_NEW_LINE="\n"
 
 if [[ "$SYNC" != "db" ]]; then
 
-echo -e "\nChecking for files to sync..."
+[[ "$SYNC" != "files" ]] && echo ""
+echo "Checking for files to sync..."
 
 FILES_SOURCE="$ENV.$SITE_ID@appserver.$ENV.$SITE_ID.drush.in:files/"
 FILES_DESTINATION="$DDEV_APPROOT/wp-content/uploads/"

@@ -5,7 +5,7 @@
 ## Example: "ddev sync --env=live --db"
 ## Flags: [{"Name":"env","Shorthand":"e","Usage":"The environment to pull from (\"dev\", \"test\", \"live\", or the multidev environment slug)","Type":"string","DefValue":"live"},{"Name":"db","Usage":"Sync the database only","Type":"bool","DefValue":"0"},{"Name":"database","Usage":"Sync the database only (alias for --db)","Type":"bool","DefValue":"0"},{"Name":"files","Usage":"Sync the files only","Type":"bool","DefValue":"0"},{"Name":"verbose","Shorthand":"v","Usage":"Enable verbose output","Type":"bool","DefValue":"0"}]
 
-# --------------------------- SETUP INSTRUCTIONS ---------------------------
+# ---------------------------- REQUIREMENTS & USAGE ----------------------------
 
 # Requirements:
 #   - Docker: https://docs.docker.com/engine/install/
@@ -13,124 +13,118 @@
 #   - Homebrew: https://brew.sh/
 #   - Terminus (by Pantheon): https://docs.pantheon.io/terminus/install
 #
-# 1. Edit the configuration below to set the Pantheon site name, slug,
-#    ID, environment URLs, and default environment to pull from.
+# 1. Set the website configuration values in the `pantheon-sync` command below.
 #
 # 2. Run `pantheon-sync --help` to see command usage, available flags,
-#    and important notes. If `pantheon-sync` is not installed, running
-#    `ddev sync`, as described below, will install it using Homebrew.
+#    and important notes.
 #
-# 3. Run `ddev sync` to pull the database and files from the live Pantheon
-#    environment into the local DDEV environment, or specify a different
-#    environment using the `--env` flag (e.g., `ddev sync --env=dev`).
+# 3. Run `ddev sync` to sync the database and files from the default environment.
+#    Use flags to customize the sync behavior:
+#
+#      --env=<env>   Pull from a specific environment: "dev", "test", "live",
+#                    or a multidev environment slug
+#                    e.g., `ddev sync --env=dev`
+#      --db          Sync the database only
+#                    e.g., `ddev sync --db`
+#      --files       Sync the files only
+#                    e.g., `ddev sync --files`
+#      --verbose     Enable verbose output for debugging
+#                    e.g., `ddev sync --verbose`
 
-# ----------------------------- CONFIGURATION ------------------------------
+# ---------------------------- DEFAULT FLAG VALUES -----------------------------
 
-# The name of the Pantheon site, which is used for identification
-SITE_NAME=""
-# The Pantheon site slug, which is the unique identifier for the site,
-# which can be found in any Pantheon environment URL for the site
-# e.g., https://live-example.pantheonsite.io
-SITE_SLUG=""
-# The Pantheon site ID, which can be found in the Pantheon dashboard
-# URL for the site
-SITE_ID=""
-# The Pantheon live environment URL. Use a comma-separated
-# list to specify multiple/alternative domains
-LIVE_DOMAIN=""
-# The Pantheon test environment URL. Use a comma-separated
-# list to specify multiple/alternative domains
-TEST_DOMAIN=""
-# The Pantheon development environment URL. Use a comma-separated
-# list to specify multiple/alternative domains
-DEV_DOMAIN=""
-# The DDEV domain for the local development environment
-DDEV_DOMAIN=""
-# The default Pantheon environment to pull from
 ENV="live"
-# Enables verbose output for debugging purposes
+SYNC="all"
 VERBOSE=0
-# Sync flags: set --db and/or --files at the command line, or leave unset to sync all
-SYNC_DB=0
-SYNC_FILES=0
 
-# --------------------------- END CONFIGURATION ----------------------------
+# -------------------------- WEBSITE CONFIGURATION ----------------------------
 
-while [[ $# -gt 0 ]]; do
-  case $1 in
+# The name of the Pantheon site, used for identification.
+SITE_NAME=""
+
+# The Pantheon site slug — the unique identifier found in any Pantheon environment URL.
+# e.g., "example" if the URL is https://live-example.pantheonsite.io
+SITE_SLUG=""
+
+# The Pantheon site ID, found in the Pantheon dashboard URL for the site.
+SITE_ID=""
+
+# Enable multisite mode. Set to 1 for WordPress multisite installs, 0 for standard installs.
+MULTISITE=0
+
+# Custom domains to search/replace for the live environment.
+# Use a comma-separated list to specify multiple domains.
+# Note: the Pantheon environment URL ({env}-{site-slug}.pantheonsite.io) is auto-added.
+LIVE_SOURCE_DOMAINS=""
+
+# The replacement domains for the live environment (the local DDEV domains).
+# Use a comma-separated list to match the order of LIVE_SOURCE_DOMAINS.
+LIVE_REPLACEMENT_DOMAINS=""
+
+# Custom domains for the test environment (optional, falls back to live domains if not set).
+# Use a comma-separated list to specify multiple domains.
+TEST_SOURCE_DOMAINS=""
+
+# The replacement domains for the test environment (the local DDEV domains).
+# Use a comma-separated list to match the order of TEST_SOURCE_DOMAINS.
+TEST_REPLACEMENT_DOMAINS=""
+
+# Custom domains for the dev environment (optional, falls back to live domains if not set).
+# Use a comma-separated list to specify multiple domains.
+DEV_SOURCE_DOMAINS=""
+
+# The replacement domains for the dev environment (the local DDEV domains).
+# Use a comma-separated list to match the order of DEV_SOURCE_DOMAINS.
+DEV_REPLACEMENT_DOMAINS=""
+
+# Custom domains for other environments, e.g. multidev (optional, falls back to live domains if not set).
+# Use a comma-separated list to specify multiple domains.
+OTHER_SOURCE_DOMAINS=""
+
+# The replacement domains for other environments (the local DDEV domains).
+# Use a comma-separated list to match the order of OTHER_SOURCE_DOMAINS.
+OTHER_REPLACEMENT_DOMAINS=""
+
+# ------------------------------------------------------------------------------
+
+for arg in "$@"; do
+  case $arg in
     -e=*|--env=*)
-      ENV="${1#*=}"
-      shift
+      ENV="${arg#*=}"
       ;;
 
-    -s=*|--sync=*)
-      SYNC="${1#*=}"
-      shift
+    --db|--database)
+      SYNC="DB"
       ;;
 
-    -m|--multisite)
-      MULTISITE=1
-      shift
+    --files)
+      SYNC="files"
       ;;
 
     -v|--verbose)
       VERBOSE=1
-      shift
       ;;
 
     -*|--*)
-      echo -e "\033[0;31mUnknown option $1\033[0m"
+      echo -e "\033[0;31mUnknown option $arg\033[0m"
       exit 1
-      ;;
-
-    *)
-      shift # past argument
       ;;
   esac
 done
 
-# Check if Homebrew is installed
-# If not, prompt the user to install it
-if ! command -v brew >/dev/null 2>&1; then
-  echo -e "\033[0;36mHomebrew is required to run this command. See https://brew.sh/ for installation instructions.\033[0m"
-  exit 1
-fi
-
-# Check if pantheon-sync is installed
-# If not, install it using Homebrew
-if ! command -v pantheon-sync >/dev/null 2>&1; then
-  echo -e "\033[0;33mpantheon-sync is required to run this command.\033[0m\n"
-  echo "Installing pantheon-sync using Homebrew..."
-  echo -e "\033[0;36m>\033[0m brew tap padillaco/formulas"
-  echo -e "\033[0;36m>\033[0m brew install pantheon-sync\n"
-
-  brew tap padillaco/formulas
-  brew install pantheon-sync
-
-  echo -e "\n"
-  sleep 1
-fi
-
-if [[ "$SYNC_DB" -eq 1 && "$SYNC_FILES" -eq 1 ]]; then
-  SYNC="all"
-elif [[ "$SYNC_DB" -eq 1 ]]; then
-  SYNC="db"
-elif [[ "$SYNC_FILES" -eq 1 ]]; then
-  SYNC="files"
-else
-  SYNC="all"
-fi
-
-# Run `pantheon-sync --help` to see command usage and available flags
 pantheon-sync \
   --site-name="$SITE_NAME" \
   --site-slug="$SITE_SLUG" \
   --site-id="$SITE_ID" \
+  --live-source-domains="$LIVE_SOURCE_DOMAINS" \
+  --live-replacement-domains="$LIVE_REPLACEMENT_DOMAINS" \
+  --test-source-domains="$TEST_SOURCE_DOMAINS" \
+  --test-replacement-domains="$TEST_REPLACEMENT_DOMAINS" \
+  --dev-source-domains="$DEV_SOURCE_DOMAINS" \
+  --dev-replacement-domains="$DEV_REPLACEMENT_DOMAINS" \
+  --other-source-domains="$OTHER_SOURCE_DOMAINS" \
+  --other-replacement-domains="$OTHER_REPLACEMENT_DOMAINS" \
   --env="$ENV" \
-  --live-domain="$LIVE_DOMAIN" \
-  --test-domain="$TEST_DOMAIN" \
-  --dev-domain="$DEV_DOMAIN" \
-  --ddev-domain="$DDEV_DOMAIN" \
-  --sync="$SYNC" \
   --multisite=$MULTISITE \
+  --sync="$SYNC" \
   --verbose=$VERBOSE

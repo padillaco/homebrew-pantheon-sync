@@ -45,7 +45,7 @@
 # 3. The order of domains in source flags determines the mapping to replacement flags. The
 #    script will replace each source domain with the corresponding replacement domain.
 
-VERSION="0.6.0"
+VERSION="0.6.2"
 LIVE_SOURCE_DOMAINS=()
 LIVE_REPLACEMENT_DOMAINS=()
 TEST_SOURCE_DOMAINS=()

@@ -45,7 +45,7 @@
 # 3. The order of domains in source flags determines the mapping to replacement flags. The
 #    script will replace each source domain with the corresponding replacement domain.
 
-VERSION="0.6.2"
+VERSION="0.6.3"
 LIVE_SOURCE_DOMAINS=()
 LIVE_REPLACEMENT_DOMAINS=()
 TEST_SOURCE_DOMAINS=()
@@ -377,6 +377,26 @@ fi
 
 MULTISITE_FLAG=""
 [[ "$MULTISITE" -eq 1 ]] && MULTISITE_FLAG=" --all-tables-with-prefix"
+
+# Sort domains by hierarchy level (number of dots) in descending order to replace lower-level domains first (deepest subdomains before top-level domains)
+declare -a SORTED_PAIRS
+for ((i=0; i<${#SOURCE_DOMAINS[@]}; i++)); do
+  dot_count=$(($(echo "${SOURCE_DOMAINS[$i]}" | tr -cd '.' | wc -c)))
+  SORTED_PAIRS+=("$dot_count|$i")
+done
+IFS=$'\n' SORTED_PAIRS=($(sort -rn <<<"${SORTED_PAIRS[*]}"))
+unset IFS
+
+declare -a SORTED_SOURCE_DOMAINS
+declare -a SORTED_REPLACEMENT_DOMAINS
+for pair in "${SORTED_PAIRS[@]}"; do
+  idx="${pair##*|}"
+  SORTED_SOURCE_DOMAINS+=("${SOURCE_DOMAINS[$idx]}")
+  SORTED_REPLACEMENT_DOMAINS+=("${REPLACEMENT_DOMAINS[$idx]}")
+done
+
+SOURCE_DOMAINS=("${SORTED_SOURCE_DOMAINS[@]}")
+REPLACEMENT_DOMAINS=("${SORTED_REPLACEMENT_DOMAINS[@]}")
 
 if [ "$VERBOSE" -eq 1 ]; then
   echo -e "\nRunning the following commands to replace domains in the database:\n"

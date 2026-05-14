@@ -45,7 +45,7 @@
 # 3. The order of domains in source flags determines the mapping to replacement flags. The
 #    script will replace each source domain with the corresponding replacement domain.
 
-VERSION="0.6.3"
+VERSION="0.6.4"
 LIVE_SOURCE_DOMAINS=()
 LIVE_REPLACEMENT_DOMAINS=()
 TEST_SOURCE_DOMAINS=()
@@ -376,7 +376,6 @@ else
 fi
 
 MULTISITE_FLAG=""
-[[ "$MULTISITE" -eq 1 ]] && MULTISITE_FLAG=" --all-tables-with-prefix"
 
 # Sort domains by hierarchy level (number of dots) in descending order to replace lower-level domains first (deepest subdomains before top-level domains)
 declare -a SORTED_PAIRS
@@ -401,7 +400,11 @@ REPLACEMENT_DOMAINS=("${SORTED_REPLACEMENT_DOMAINS[@]}")
 if [ "$VERBOSE" -eq 1 ]; then
   echo -e "\nRunning the following commands to replace domains in the database:\n"
   for ((i=0; i<${#SOURCE_DOMAINS[@]}; i++)); do
-    echo -e "  \033[36mddev wp search-replace '${SOURCE_DOMAINS[$i]}' '${REPLACEMENT_DOMAINS[$i]}'${MULTISITE_FLAG} --skip-columns=guid --skip-plugins --skip-themes 2>/dev/null\033[0m"
+    DOMAIN_MULTISITE_FLAG=""
+    if [[ "$MULTISITE" -eq 1 ]]; then
+      DOMAIN_MULTISITE_FLAG=" --all-tables-with-prefix --url=${SOURCE_DOMAINS[$i]}"
+    fi
+    echo -e "  \033[36mddev wp search-replace '${SOURCE_DOMAINS[$i]}' '${REPLACEMENT_DOMAINS[$i]}'${DOMAIN_MULTISITE_FLAG} --skip-columns=guid --skip-plugins --skip-themes 2>/dev/null\033[0m"
   done
   echo ""
 fi
@@ -412,8 +415,14 @@ REPLACEMENTS=0
 SPINSTR='|/-\'
 tput civis 2>/dev/null
 
+
+# Set MULTISITE_FLAG dynamically per domain
 for ((i=0; i<${#SOURCE_DOMAINS[@]}; i++)); do
-  DOMAIN_CMD="ddev wp search-replace '${SOURCE_DOMAINS[$i]}' '${REPLACEMENT_DOMAINS[$i]}'${MULTISITE_FLAG} --skip-columns=guid --skip-plugins --skip-themes 2>/dev/null"
+  DOMAIN_MULTISITE_FLAG=""
+  if [[ "$MULTISITE" -eq 1 ]]; then
+    DOMAIN_MULTISITE_FLAG=" --all-tables-with-prefix --url=${SOURCE_DOMAINS[$i]}"
+  fi
+  DOMAIN_CMD="ddev wp search-replace '${SOURCE_DOMAINS[$i]}' '${REPLACEMENT_DOMAINS[$i]}'${DOMAIN_MULTISITE_FLAG} --skip-columns=guid --skip-plugins --skip-themes 2>/dev/null"
   DOMAIN_TMPFILE=$(mktemp)
   bash -c "$DOMAIN_CMD" >"$DOMAIN_TMPFILE" 2>&1 </dev/null &
   DOMAIN_CMD_PID=$!
@@ -452,8 +461,25 @@ COMPLETED_EMAIL_DOMAIN_COUNT=0
 EMAIL_RESTORATIONS=0
 tput civis 2>/dev/null
 
+if [ "$VERBOSE" -eq 1 ]; then
+  echo -e "\nRunning the following commands to restore email domains in the database:\n"
+  for ((i=0; i<${#SOURCE_DOMAINS[@]}; i++)); do
+    EMAIL_MULTISITE_FLAG=""
+    if [[ "$MULTISITE" -eq 1 ]]; then
+      EMAIL_MULTISITE_FLAG=" --all-tables-with-prefix --url=${REPLACEMENT_DOMAINS[$i]}"
+    fi
+    echo -e "  \033[36mddev wp search-replace '@${REPLACEMENT_DOMAINS[$i]}' '@${SOURCE_DOMAINS[$i]}'${EMAIL_MULTISITE_FLAG} --skip-plugins --skip-themes 2>/dev/null\033[0m"
+  done
+  echo ""
+fi
+
+# Set MULTISITE_FLAG dynamically per domain for email restoration
 for ((i=0; i<${#SOURCE_DOMAINS[@]}; i++)); do
-  EMAIL_CMD="ddev wp search-replace '@${REPLACEMENT_DOMAINS[$i]}' '@${SOURCE_DOMAINS[$i]}'${MULTISITE_FLAG} --skip-plugins --skip-themes 2>/dev/null"
+  EMAIL_MULTISITE_FLAG=""
+  if [[ "$MULTISITE" -eq 1 ]]; then
+    EMAIL_MULTISITE_FLAG=" --all-tables-with-prefix --url=${REPLACEMENT_DOMAINS[$i]}"
+  fi
+  EMAIL_CMD="ddev wp search-replace '@${REPLACEMENT_DOMAINS[$i]}' '@${SOURCE_DOMAINS[$i]}'${EMAIL_MULTISITE_FLAG} --skip-plugins --skip-themes 2>/dev/null"
   EMAIL_TMPFILE=$(mktemp)
   bash -c "$EMAIL_CMD" >"$EMAIL_TMPFILE" 2>&1 </dev/null &
   EMAIL_CMD_PID=$!
@@ -486,6 +512,7 @@ else
 fi
 
 echo -e "\nFlushing the WordPress cache..."
+
 
 # Flush the WordPress cache to ensure all changes are applied
 # This command uses the DDEV WP CLI to flush the cache for the specified URL

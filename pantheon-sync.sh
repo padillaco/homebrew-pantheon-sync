@@ -366,9 +366,9 @@ fi
 rm -rf "$TEMP_DIR"
 
 if [[ "${#SOURCE_DOMAINS[@]}" -eq 1 ]]; then
-  echo -e "\nReplacing URLs in the database from \033[36m$SOURCE_DOMAINS\033[0m to \033[36m$REPLACEMENT_DOMAINS\033[0m..."
+  echo -e "\nReplacing domains in the database from \033[36m$SOURCE_DOMAINS\033[0m to \033[36m$REPLACEMENT_DOMAINS\033[0m..."
 else
-  echo -e "\nReplacing URLs in the database from:"
+  echo -e "\nReplacing domains in the database from:"
   
   for ((i=0; i<${#SOURCE_DOMAINS[@]}; i++)); do
     echo -e "  - \033[36m${SOURCE_DOMAINS[$i]}\033[0m to \033[36m${REPLACEMENT_DOMAINS[$i]}\033[0m"
@@ -379,9 +379,9 @@ MULTISITE_FLAG=""
 [[ "$MULTISITE" -eq 1 ]] && MULTISITE_FLAG=" --all-tables-with-prefix"
 
 if [ "$VERBOSE" -eq 1 ]; then
-  echo -e "\nRunning the following commands to replace URLs in the database:\n"
+  echo -e "\nRunning the following commands to replace domains in the database:\n"
   for ((i=0; i<${#SOURCE_DOMAINS[@]}; i++)); do
-    echo -e "  \033[36mddev wp search-replace '://${SOURCE_DOMAINS[$i]}' '://${REPLACEMENT_DOMAINS[$i]}'${MULTISITE_FLAG} --skip-columns=guid --skip-plugins --skip-themes 2>/dev/null\033[0m"
+    echo -e "  \033[36mddev wp search-replace '${SOURCE_DOMAINS[$i]}' '${REPLACEMENT_DOMAINS[$i]}'${MULTISITE_FLAG} --skip-columns=guid --skip-plugins --skip-themes 2>/dev/null\033[0m"
   done
   echo ""
 fi
@@ -393,7 +393,7 @@ SPINSTR='|/-\'
 tput civis 2>/dev/null
 
 for ((i=0; i<${#SOURCE_DOMAINS[@]}; i++)); do
-  DOMAIN_CMD="ddev wp search-replace '://${SOURCE_DOMAINS[$i]}' '://${REPLACEMENT_DOMAINS[$i]}'${MULTISITE_FLAG} --skip-columns=guid --skip-plugins --skip-themes 2>/dev/null"
+  DOMAIN_CMD="ddev wp search-replace '${SOURCE_DOMAINS[$i]}' '${REPLACEMENT_DOMAINS[$i]}'${MULTISITE_FLAG} --skip-columns=guid --skip-plugins --skip-themes 2>/dev/null"
   DOMAIN_TMPFILE=$(mktemp)
   bash -c "$DOMAIN_CMD" >"$DOMAIN_TMPFILE" 2>&1 </dev/null &
   DOMAIN_CMD_PID=$!
@@ -423,6 +423,46 @@ if [[ "$REPLACEMENTS" -eq 1 ]]; then
   echo -e "\033[32m1 total replacement made\033[0m"
 else
   echo -e "\033[32m$REPLACEMENTS total replacements made\033[0m"
+fi
+
+echo -e "\nRestoring email addresses to original domains..."
+
+TOTAL_EMAIL_DOMAIN_COUNT=${#SOURCE_DOMAINS[@]}
+COMPLETED_EMAIL_DOMAIN_COUNT=0
+EMAIL_RESTORATIONS=0
+tput civis 2>/dev/null
+
+for ((i=0; i<${#SOURCE_DOMAINS[@]}; i++)); do
+  EMAIL_CMD="ddev wp search-replace '@${REPLACEMENT_DOMAINS[$i]}' '@${SOURCE_DOMAINS[$i]}'${MULTISITE_FLAG} --skip-plugins --skip-themes 2>/dev/null"
+  EMAIL_TMPFILE=$(mktemp)
+  bash -c "$EMAIL_CMD" >"$EMAIL_TMPFILE" 2>&1 </dev/null &
+  EMAIL_CMD_PID=$!
+
+  while kill -0 $EMAIL_CMD_PID 2>/dev/null; do
+    for j in $(seq 0 3); do
+      printf "\r%d of %d email domains restored [%c]  " "$COMPLETED_EMAIL_DOMAIN_COUNT" "$TOTAL_EMAIL_DOMAIN_COUNT" "${SPINSTR:$j:1}"
+      sleep 0.1
+    done
+  done
+
+  wait $EMAIL_CMD_PID
+  EMAIL_OUTPUT=$(cat "$EMAIL_TMPFILE")
+  rm -f "$EMAIL_TMPFILE"
+
+  COMPLETED_EMAIL_DOMAIN_COUNT=$((COMPLETED_EMAIL_DOMAIN_COUNT + 1))
+
+  for n in $(echo "$EMAIL_OUTPUT" | grep -oE 'Success: Made [0-9]+' | grep -oE '[0-9]+'); do
+    EMAIL_RESTORATIONS=$((EMAIL_RESTORATIONS + n))
+  done
+done
+
+printf "\r%-50s\r" ""
+tput cnorm 2>/dev/null
+
+if [[ "$EMAIL_RESTORATIONS" -eq 1 ]]; then
+  echo -e "\033[32m1 email domain restored\033[0m"
+else
+  echo -e "\033[32m$EMAIL_RESTORATIONS email domains restored\033[0m"
 fi
 
 echo -e "\nFlushing the WordPress cache..."

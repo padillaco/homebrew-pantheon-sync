@@ -45,7 +45,7 @@
 #    script will replace each source domain with the corresponding replacement domain.
 
 # Version of the script used for release tracking and the Homebrew formula.
-VERSION="0.6.5"
+VERSION="0.6.6"
 
 # Domain arrays used to map source and replacement hostnames for each environment.
 LIVE_SOURCE_DOMAINS=()
@@ -399,7 +399,7 @@ REPLACEMENT_DOMAINS=("${SORTED_REPLACEMENT_DOMAINS[@]}")
 if [ "$VERBOSE" -eq 1 ]; then
   echo -e "\nRunning the following commands to replace domains in the database:\n"
   for ((i=0; i<${#SOURCE_DOMAINS[@]}; i++)); do
-    echo -e "  \033[36mddev wp search-replace '${SOURCE_DOMAINS[$i]}' '${REPLACEMENT_DOMAINS[$i]}' --skip-columns=guid --skip-plugins --skip-themes 2>/dev/null\033[0m"
+    echo -e "  \033[36mddev wp search-replace '${SOURCE_DOMAINS[$i]}' '${REPLACEMENT_DOMAINS[$i]}' --all-tables-with-prefix --skip-columns=guid --skip-plugins --skip-themes 2>/dev/null\033[0m"
   done
   echo ""
 fi
@@ -412,7 +412,7 @@ tput civis 2>/dev/null
 
 # Apply each domain replacement to the local WordPress database using WP-CLI.
 for ((i=0; i<${#SOURCE_DOMAINS[@]}; i++)); do
-  DOMAIN_CMD="ddev wp search-replace '${SOURCE_DOMAINS[$i]}' '${REPLACEMENT_DOMAINS[$i]}' --skip-columns=guid --skip-plugins --skip-themes 2>/dev/null"
+  DOMAIN_CMD="ddev wp search-replace '${SOURCE_DOMAINS[$i]}' '${REPLACEMENT_DOMAINS[$i]}' --all-tables-with-prefix --skip-columns=guid --skip-plugins --skip-themes 2>/dev/null"
   DOMAIN_TMPFILE=$(mktemp)
   bash -c "$DOMAIN_CMD" >"$DOMAIN_TMPFILE" 2>&1 </dev/null &
   DOMAIN_CMD_PID=$!
@@ -454,14 +454,14 @@ tput civis 2>/dev/null
 if [ "$VERBOSE" -eq 1 ]; then
   echo -e "\nRunning the following commands to restore email domains in the database:\n"
   for ((i=0; i<${#SOURCE_DOMAINS[@]}; i++)); do
-    echo -e "  \033[36mddev wp search-replace '@${REPLACEMENT_DOMAINS[$i]}' '@${SOURCE_DOMAINS[$i]}' --skip-plugins --skip-themes 2>/dev/null\033[0m"
+    echo -e "  \033[36mddev wp search-replace '@${REPLACEMENT_DOMAINS[$i]}' '@${SOURCE_DOMAINS[$i]}' --all-tables-with-prefix --skip-columns=guid --skip-plugins --skip-themes 2>/dev/null\033[0m"
   done
   echo ""
 fi
 
 # Restore email addresses that use the local replacement domains back to their original domains.
 for ((i=0; i<${#SOURCE_DOMAINS[@]}; i++)); do
-  EMAIL_CMD="ddev wp search-replace '@${REPLACEMENT_DOMAINS[$i]}' '@${SOURCE_DOMAINS[$i]}' --skip-plugins --skip-themes 2>/dev/null"
+  EMAIL_CMD="ddev wp search-replace '@${REPLACEMENT_DOMAINS[$i]}' '@${SOURCE_DOMAINS[$i]}' --all-tables-with-prefix --skip-columns=guid --skip-plugins --skip-themes 2>/dev/null"
   EMAIL_TMPFILE=$(mktemp)
   bash -c "$EMAIL_CMD" >"$EMAIL_TMPFILE" 2>&1 </dev/null &
   EMAIL_CMD_PID=$!

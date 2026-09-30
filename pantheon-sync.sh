@@ -160,8 +160,8 @@ while [[ $# -gt 0 ]]; do
     --update)
       # Refresh the Homebrew formula to pull the latest published version.
       brew uninstall pantheon-sync wpengine-sync
-      brew untap padillaco/formulas
-      brew tap padillaco/formulas
+      brew untap padillaco/homebrew-formulas
+      brew tap padillaco/homebrew-formulas
       brew install pantheon-sync wpengine-sync
       exit 0
       ;;

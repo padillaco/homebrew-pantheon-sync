@@ -20,7 +20,7 @@ Syncs the database and files from a specified Pantheon environment.
 **Installation:**
 
 ```sh
-$ brew tap padillaco/formulas
+$ brew tap padillaco/homebrew-formulas
 $ brew install pantheon-sync
 ```
 **Updating to a newer version:**

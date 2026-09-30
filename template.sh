@@ -49,9 +49,6 @@ SITE_SLUG=""
 # The Pantheon site ID, found in the Pantheon dashboard URL for the site.
 SITE_ID=""
 
-# Enable multisite mode. Set to 1 for WordPress multisite installs, 0 for standard installs.
-MULTISITE=0
-
 # Custom domains to search/replace for the live environment.
 # Use a comma-separated list to specify multiple domains.
 # Note: the Pantheon environment URL ({env}-{site-slug}.pantheonsite.io) is auto-added.
@@ -125,6 +122,5 @@ pantheon-sync \
   --other-source-domains="$OTHER_SOURCE_DOMAINS" \
   --other-replacement-domains="$OTHER_REPLACEMENT_DOMAINS" \
   --env="$ENV" \
-  --multisite=$MULTISITE \
   --sync="$SYNC" \
   --verbose=$VERBOSE
